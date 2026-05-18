@@ -23,12 +23,13 @@ private slots:
 
 signals:
     void signalFetchStarted(void);
-    void signalNewCollection();
+    void signalNewCollection(QVector<Frame> const&);
 
 private:
     Node* _master;
     QVector<Frame> _frameBuffer;
     bool _fetchInProgress = false;
+    QDateTime _fetchStarted;
 };
 
 #endif // COLLECTOR_H

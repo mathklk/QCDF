@@ -1,18 +1,266 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+#include "plot.h"
+
+#include <QFontDatabase>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QPolarChart>
+
+namespace brush {
+    QBrush gray(QColor::fromRgb(0x7f, 0x7f, 0x7f));
+    QBrush black(QColor::fromRgb(0x00, 0x00, 0x01));
+    QBrush blue(QColor::fromRgb(23, 159, 223));
+    QBrush red(QColor::fromRgb(191, 89, 62));
+    QBrush green(QColor::fromRgb(0x77, 0xdd, 0x77));
+};
+
+constexpr int FRAME_SIZE = 7000;
+
+MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collector *const collector):
+    QMainWindow(nullptr),
+    ui(new Ui::MainWindow),
+    _recorder(core),
+    _nodes(nodes),
+    _collector(collector)
 {
     ui->setupUi(this);
+    setWindowTitle("QCDF");
 
+    for (Node *const node : nodes) {
+        connect(this, &MainWindow::reconnectNodes, node, &Node::reconnect);
+    }
+    connect(this, &MainWindow::bytesToNode0, nodes[0], &Node::write);
+    connect(this, &MainWindow::bytesToNode1, nodes[1], &Node::write);
+    connect(this, &MainWindow::bytesToNode2, nodes[2], &Node::write);
+    connect(this, &MainWindow::bytesToNode3, nodes[3], &Node::write);
+
+    // Settings
     _settingsDialog = new SettingsDialog();
     connect(ui->actionSettings, &QAction::triggered, _settingsDialog, &QWidget::show);
+    connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::settingsChanged);
+    connect(_settingsDialog, &SettingsDialog::slidersChanged, this, &MainWindow::calc);
 
-    connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::reconnectNodes);
+    // Terminals
+    _nodeInit = {
+        {ui->textEdit_1, ui->progressBar_1, ui->lineEdit_1},
+        {ui->textEdit_2, ui->progressBar_2, ui->lineEdit_2},
+        {ui->textEdit_3, ui->progressBar_3, ui->lineEdit_3},
+        {ui->textEdit_4, ui->progressBar_4, ui->lineEdit_4}
+    };
+    QFont monospaceFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    monospaceFont.setPointSize(12);
+    for (NodeInit const& ni : _nodeInit) {
+        ni.terminal->setFont(monospaceFont);
+        ni.terminal->setReadOnly(true);
+        ni.terminal->setLineWrapMode(QTextEdit::NoWrap);
+        ni.lineEdit->setFont(monospaceFont);
+    }
+    for (int i = 0; i < 4; ++i) {
+        connect(_nodes[i], &Node::progress, this, [this, i](int v, int m){
+            _nodeInit[i].progressBar->setMaximum(m);
+            _nodeInit[i].progressBar->setValue(v);
+        });
+        connect(_nodes[i], &Node::signalNewChars, this, [this, i](QString const& str){
+            int const LIMIT = 1000;
+            QString cat = _nodeInit[i].terminal->toPlainText() + str;
+            _nodeInit[i].terminal->setText(
+                cat.sliced(qMax(0, cat.size() - LIMIT))
+            );
+            QTextCursor cursor = _nodeInit[i].terminal->textCursor();
+            cursor.movePosition(QTextCursor::End);
+            _nodeInit[i].terminal->setTextCursor(cursor);
+        });
+        connect(_nodes[i], &Node::active, this, [this, i](bool active){
+            _nodeInit[i].lineEdit->setEnabled(active);
+            _nodeInit[i].progressBar->setEnabled(active);
+            _nodeInit[i].terminal->setEnabled(active);
+        });
+    }
+    connect(_nodeInit[0].lineEdit, &QLineEdit::returnPressed, this, [this]() {
+        QByteArray const bytes = _nodeInit[0].lineEdit->text().toLatin1();
+        emit bytesToNode0(bytes);
+        _nodeInit[0].lineEdit->clear();
+    });
+    connect(_nodeInit[1].lineEdit, &QLineEdit::returnPressed, this, [this]() {
+        QByteArray const bytes = _nodeInit[1].lineEdit->text().toLatin1();
+        emit bytesToNode1(bytes);
+        _nodeInit[1].lineEdit->clear();
+    });
+    connect(_nodeInit[2].lineEdit, &QLineEdit::returnPressed, this, [this]() {
+        QByteArray const bytes = _nodeInit[2].lineEdit->text().toLatin1();
+        emit bytesToNode2(bytes);
+        _nodeInit[2].lineEdit->clear();
+    });
+    connect(_nodeInit[3].lineEdit, &QLineEdit::returnPressed, this, [this]() {
+        QByteArray const bytes = _nodeInit[3].lineEdit->text().toLatin1();
+        emit bytesToNode3(bytes);
+        _nodeInit[3].lineEdit->clear();
+    });
 
-    reconnectNodes();
+
+    // Broadcast Line
+    connect(ui->lineEditBroadcast, &QLineEdit::returnPressed, this, [this](){
+        QByteArray const bytes = ui->lineEditBroadcast->text().toLatin1();
+        emit bytesToNode0(bytes);
+        emit bytesToNode1(bytes);
+        emit bytesToNode2(bytes);
+        emit bytesToNode3(bytes);
+        ui->lineEditBroadcast->clear();
+    });
+
+    // Recorder
+    connect(_recorder, &Recorder::recordProgress, this, [this](int v, int m){
+        ui->progressBarRecord->setMaximum(m);
+        ui->progressBarRecord->setValue(v);
+    });
+    connect(_recorder, &Recorder::data, this, [this](QVector<QVector<Frame>> data){
+        ui->pushButtonSave->setEnabled(not data.empty());
+        ui->pushButtonClearRecord->setEnabled(not data.empty());
+        ui->listWidgetRecord->clear();
+        for (auto const& collection : data) {
+            QVector<ComplexList> cl;
+            cl << collection[0].asComplex() << collection[1].asComplex() << collection[2].asComplex();
+            auto item = new ListItem(
+                collection[0].id,
+                "Record " + QString::number(collection[0].id),
+                cl,
+                QString("[%1, %2, %3] %4").arg(
+                    QString::number(collection[0].id),
+                    QString::number(collection[1].id),
+                    QString::number(collection[2].id),
+                    (collection[0].crcIsOk and collection[1].crcIsOk and collection[2].crcIsOk) ? "" : "BAD CHECKSUM"
+                ),
+                ui->listWidgetRecord
+            );
+            item->setSelected(true);
+        }
+        ui->listWidgetRecord->scrollToBottom();
+    });
+
+    // Recording
+    connect(ui->spinBoxRecordCount, &QSpinBox::valueChanged, ui->progressBarRecord, &QProgressBar::setMaximum);
+    connect(ui->spinBoxRecordCount, &QSpinBox::valueChanged, _recorder, &Recorder::setRecordCount);
+    connect(ui->spinBoxRecordTimer, &QSpinBox::valueChanged, _recorder, &Recorder::setRecordTimer);
+    _recorder->setRecordCount(ui->spinBoxRecordCount->value());
+    _recorder->setRecordTimer(ui->spinBoxRecordTimer->value());
+    connect(ui->pushButtonStart, &QPushButton::clicked, this, [this](){
+        ui->pushButtonStart->setEnabled(false);
+        ui->pushButtonStop->setEnabled(true);
+    });
+    connect(ui->pushButtonStart, &QPushButton::clicked, _recorder, &Recorder::startRecording);
+    connect(ui->pushButtonStop, &QPushButton::clicked, this, [this](){
+        ui->pushButtonStop->setEnabled(false);
+        ui->pushButtonStart->setEnabled(true);
+    });
+    connect(ui->pushButtonStop, &QPushButton::clicked, _recorder, &Recorder::stopRecording);
+    connect(ui->pushButtonSave, &QPushButton::clicked, this, [this](){
+        QString dir = QFileDialog::getExistingDirectory(nullptr, "Select Save Location");
+        if (dir.isEmpty()) {
+            return;
+        }
+        bool const dirIsEmpty = QDir(dir).entryList(QDir::NoDotAndDotDot | QDir::AllEntries).isEmpty();
+        if (not dir.isEmpty() and not dirIsEmpty) {
+            // Ask user if they want to save in non-empty directory, this may overwrite files
+            bool const overwrite = QMessageBox::question(
+                this,
+                "Warning",
+                "The Selected directory is not empty.\nDo you still want to save recordings here?\nThis may overwrite existing files.\n\n" +dir
+            ) == QMessageBox::Yes;
+            if (not overwrite) {
+                return;
+            }
+        }
+        for (QListWidgetItem *const qitem : ui->listWidgetRecord->selectedItems()) {
+            ListItem *const item = dynamic_cast<ListItem *const>(qitem);
+            if (item == nullptr) {
+                continue;
+            }
+            QJsonArray json;
+            for (ComplexList const& cl : item->data) {
+                json << cl.toJson();
+            }
+            int const id = item->id;
+            QFile file(dir + "/" + QString("%1").arg(id, 5, 10, QChar('0')) + ".json");
+            if (!file.open(QIODevice::WriteOnly)) {
+                qWarning() << "Couldn't open save file." << file.errorString();
+                continue;
+            }
+            file.write(QJsonDocument(json).toJson(QJsonDocument::Compact));
+        }
+    });
+    connect(ui->listWidgetRecord, &QListWidget::itemSelectionChanged, this, [this](){
+        ui->pushButtonSave->setEnabled(not ui->listWidgetRecord->selectedItems().isEmpty());
+    });
+    connect(ui->pushButtonClearRecord, &QPushButton::clicked, _recorder, &Recorder::clear);
+
+    // Loading
+    connect(ui->pushButtonLoadFiles, &QPushButton::clicked, this, [this]{
+        QStringList const files = QFileDialog::getOpenFileNames(nullptr, "Select recordings to load");
+        if (not files.isEmpty()) {
+            loadFiles(files);
+        }
+    });
+    connect(ui->pushButtonLoadDir, &QPushButton::clicked, this, [this]{
+        QString const directory = QFileDialog::getExistingDirectory(nullptr, "Select directory to load all files from");
+        if (directory.isEmpty()) {
+            return;
+        }
+        // List all json files in directory
+        QStringList const files = QDir(directory).entryList({"*.json"}, QDir::Files);
+        if (files.isEmpty()) {
+            QMessageBox::warning(this, "Directory is empty", "Directory '" + directory + "' is empty.");
+        } else {
+            QStringList absoluteFiles;
+            for (QString const& file : files) {
+                absoluteFiles << QDir(directory).absoluteFilePath(file);
+            }
+            loadFiles(absoluteFiles);
+        }
+    });
+    connect(ui->pushButtonClearLoad, &QPushButton::clicked, this, [this](){
+        ui->listWidgetLoad->clear();
+    });
+
+    // Calculation
+    _comboBoxBatchChartType = new QComboBox(this);
+    _comboBoxBatchChartType->addItems({
+        "MUSIC Cartesian Seperate",
+        "MUSIC Cartesian Sum",
+        "MUSIC Polar Seperate",
+        "MUSIC Polar Sum",
+        "Amplitude",
+        "Reference Phases",
+        "Peaks over time",
+        "Spectrogram"
+    });
+    ui->chartWidget->addToolWidget(_comboBoxBatchChartType);
+    connect(_comboBoxBatchChartType, &QComboBox::currentTextChanged, this, &MainWindow::calc);
+    connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::calc);
+
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this](int index){
+        if (index == 0) {
+            calc();
+        }
+    });
+
+    // Actions
+    QList<QAction*> reCalcActions = {
+        ui->actionShow_Pong_Only,
+        ui->actionShow_MUSIC_Peaks,
+        ui->actionLog_Amplitude,
+        ui->actionShow_Ranges
+    };
+    for (QAction *const action : reCalcActions) {
+        connect(action, &QAction::toggled, this, &MainWindow::calc);
+    }
+    connect(ui->actionClear_Cache, &QAction::triggered, this, [this](){
+        _cache.clear();
+        calc();
+    });
+
+    settingsChanged();
 }
 
 MainWindow::~MainWindow()
@@ -20,47 +268,478 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::reconnectNodes()
+void MainWindow::settingsChanged()
 {
-    for (Node *const node : _nodes) {
-        delete node;
-    }
-    _nodes.clear();
-    if (_collector != nullptr) {
-        delete _collector;
-    }
-
-    struct NodeInit {
-        QTextEdit* terminal;
-        QProgressBar* progressBar;
-        QLineEdit* lineEdit;
-    };
-
-    QVector<NodeInit> const nodeInit = {
-        {ui->textEdit_1, ui->progressBar_1, ui->lineEdit_1},
-        {ui->textEdit_2, ui->progressBar_2, ui->lineEdit_2},
-        {ui->textEdit_3, ui->progressBar_3, ui->lineEdit_3},
-        {ui->textEdit_4, ui->progressBar_4, ui->lineEdit_4}
-    };
-
     QStringList const serialPorts = _settingsDialog->settings().serialPorts;
     if (serialPorts.size() != 4) {
         return;
     }
     for (int i = 0; i < 4; ++i) {
-        _nodes << new Node(
-            this,
-            serialPorts[i],
-            nodeInit[i].terminal,
-            nodeInit[i].lineEdit,
-            nodeInit[i].progressBar
-        );
-        if (not _nodes.last()->open()) {
-            qWarning() << "Failed to open" << serialPorts[i];
+        _nodeInit[i].progressBar->setValue(0);
+        _nodeInit[i].progressBar->setMaximum(1);
+        _nodeInit[i].lineEdit->setPlaceholderText(serialPorts[i]);
+        _nodes[i]->setPortName(serialPorts[i]);
+    }
+    emit reconnectNodes();
+}
+
+void MainWindow::loadFiles(QStringList const& files) {
+    ui->listWidgetLoad->clear();
+    ui->pushButtonClearLoad->setEnabled(not files.isEmpty());
+    ui->progressBarLoad->setMaximum(files.size());
+    int i = 0;
+    for (QString const& fileName : files) {
+        ui->progressBarLoad->setValue(++i);
+        QFile file(fileName);
+        if (not file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Couldn't open file" << file.fileName() << file.errorString();
+            continue;
+        }
+        QByteArray const bytes = file.readAll();
+        file.close();
+        QJsonDocument const doc = QJsonDocument::fromJson(bytes);
+        if (not doc.isArray()) {
+            qWarning() << "File" << file.errorString() << "does not contain an array";
+            continue;
+        }
+        QJsonArray const& array = doc.array();
+        if (array.size() != 3) {
+            qWarning() << "File" << file.errorString() << "does not contain three subarrays" << array.size();
+            continue;
+        }
+        QVector<ComplexList> cl = {
+            ComplexList::fromJson(array[0].toArray()),
+            ComplexList::fromJson(array[1].toArray()),
+            ComplexList::fromJson(array[2].toArray()),
+        };
+        // id from filename "00001.json"
+        int const id = QFileInfo(fileName).baseName().toInt();
+        auto item = new ListItem(id, fileName, cl, QFileInfo(fileName).fileName(), ui->listWidgetLoad);
+        item->setToolTip(fileName);
+        item->setSelected(true);
+    }
+}
+
+static double wrapPi (double x) {
+    while (x <= -M_PI) x += 2*M_PI;
+    while (x > M_PI) x -= 2*M_PI;
+    return x;
+}
+
+void MainWindow::calc() {
+    if (ui->tabWidget->currentIndex() != 0) {
+        return;
+    }
+
+    QVector<QPair<QString, QVector<ComplexList>>> records;
+    for (QListWidget *const listWidget : { ui->listWidgetLoad, ui->listWidgetRecord }) {
+        for (QListWidgetItem *const qitem : listWidget->selectedItems()) {
+            ListItem *const item = dynamic_cast<ListItem *const>(qitem);
+            if (item == nullptr) {
+                continue;
+            }
+            records.append({item->name, item->data});
         }
     }
-    _collector = new Collector(
-        { _nodes[0], _nodes[1], _nodes[2] },
-        _nodes[3]
-    );
+    if (records.isEmpty()) {
+        return;
+    }
+
+    qDebug() << "calc";
+
+    SettingsDialog::Settings const settings = _settingsDialog->settings();
+
+    // Calc X Units (ms)
+    constexpr float resolution = 1.0f / 1000;
+    QList<float> X;
+    X.reserve(FRAME_SIZE);
+    for (int i = 0; i < FRAME_SIZE; ++i) {
+        X.append(i * resolution);
+    }
+
+    // Calibration and Pong ranges
+    int const caliCenter = settings.calibration.center;
+    int const caliWidth  = settings.calibration.width;
+    int const pongCenter = settings.pong.center;
+    int const pongWidth  = settings.pong.width;
+    int const caliStart = qMax(0,          caliCenter - caliWidth);
+    int const caliEnd   = qMin(FRAME_SIZE, caliCenter + caliWidth);
+    int const pongStart = qMax(0,          pongCenter - pongWidth);
+    int const pongEnd   = qMin(FRAME_SIZE, pongCenter + pongWidth);
+
+    // Load all json files in dir as ComplexLists
+    // QVector<ComplexList> are the three modules I/Q samples
+    QVector<CacheEntry> batch;
+    batch.reserve(records.size());
+    ui->progressBarChart->setMaximum(records.size());
+    for (auto const& [name, collection] : records) {
+        ui->progressBarChart->setValue(batch.size());
+        QString const cacheKey = name + "_" + QString::number(qHashBits(&settings, sizeof(settings)), 32);
+        // First, check if file is already cached
+        if (_cache.contains(cacheKey)) {
+            batch << _cache[cacheKey];
+            continue;
+        }
+        // If not cached, make calculations and add to cache
+        CacheEntry entry;
+        entry.name = name;
+        entry.collection = collection;
+
+        // Check for pong signal
+        float const absLnStdDev = entry.collection[0].sliced(pongStart, 2*pongWidth).abs().ln().stdDev();
+        entry.hasPong = absLnStdDev < settings.lns;
+
+        // Calculate MUSIC spectrum
+        entry.music.spectrum = music(
+            settings.arrayType,
+            settings.antennaSpacing,
+            entry.collection,
+            {caliStart, caliEnd},
+            {pongStart, pongEnd},
+            entry.music.peakAngle,
+            entry.music.min,
+            entry.music.max
+        );
+
+        _cache[cacheKey] = entry;
+        batch << entry;
+    }
+    ui->progressBarChart->setValue(batch.size());
+
+    // Normalize (this did not end up beeing meaningful and has been removed)
+    // if (_checkBoxBatchChartNormalization->isChecked()) {
+    //     for (auto& entry : batch) {
+    //         normalizeSpectrum(entry.spectrum);
+    //     }
+    // }
+
+    float minYSeperate = INFINITY;
+    float maxYSeperate = -INFINITY;
+    for (auto const& entry : batch) {
+        minYSeperate = qMin(entry.music.min, minYSeperate);
+        maxYSeperate = qMax(entry.music.max, maxYSeperate);
+    }
+
+    // Individual peaks
+    NumList<int> peaks;
+    for (auto const& entry : batch) {
+        if (entry.hasPong) {
+            peaks << entry.music.peakAngle;
+        }
+    }
+
+    // Sum up all spectra
+    Spectrum sumSpectrum;
+    // Init sumspectrum with angles and 0
+    for (auto const& [angle, amp] : batch[0].music.spectrum) {
+        sumSpectrum.append({angle, 0});
+    }
+    // Add all spectra (that have a pong)
+    for (auto const& entry : batch) {
+        // Ignore records without pong
+        if (not entry.hasPong) {
+            continue;
+        }
+        for (int i = 0; i < entry.music.spectrum.size(); ++i) {
+            sumSpectrum[i].second += entry.music.spectrum[i].second;
+        }
+    }
+
+    float maxYSum = -INFINITY;
+    float minYSum = INFINITY;
+    int sumPeak;
+    for (auto const& [angle, amp]: sumSpectrum) {
+        if (amp > maxYSum) {
+            maxYSum = amp;
+            sumPeak = angle;
+        }
+        minYSum = qMin(minYSum, amp);
+    }
+
+    QStringList names;
+    for (CacheEntry const& entry : batch) {
+        names << entry.name;
+    }
+    ui->labelEvalSamples->setText(QString::number(peaks.size()) + " / " + QString::number(batch.size()));
+    ui->labelEvalSamples->setToolTip(names.join("\n"));
+    ui->labelEvalMean->setText(QString::number(peaks.mean(), 'f', 2) + "°");
+    ui->labelEvalStdDev->setText(QString::number(peaks.stdDev(), 'f', 2) + "°");
+    ui->labelEvalSumPeak->setText(QString::number(sumPeak) + "°");
+
+    // Plot Batch
+    QChart *chart = nullptr;
+    QTransform transform;
+    QString const chartType = _comboBoxBatchChartType->currentText();
+    if (chartType == "MUSIC Cartesian Seperate") {
+        chart = new QChart();
+        for (int i = 0; i < batch.size(); ++i) {
+            // Spectrum
+            auto const entry = batch[i];
+            if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+                QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
+                QLineSeries *const series = plot::line(chart, entry.music.spectrum, "", brush);
+                connect(series, &QLineSeries::clicked, this, [entry](){
+                    qInfo() << "Spectrum" << entry.name;
+                });
+            }
+            // Peak
+            if (entry.hasPong and ui->actionShow_MUSIC_Peaks->isChecked()) {
+                float const minY = /*_checkBoxBatchChartNormalization->isChecked() ? -1.0f : */minYSeperate;
+                QLineSeries *const peakLine = plot::box(chart, entry.music.peakAngle, entry.music.peakAngle, minY, 0.0f, QString::number(i), brush::green);
+                connect(peakLine, &QLineSeries::clicked, this, [entry](){
+                    qInfo() << "Peak" << entry.name;
+                });
+            }
+
+        }
+        plot::makeAxes(
+            chart,
+            "Winkel / °",
+            "MUSIC Pseudo-Spektrum / dB"
+            );
+        chart->legend()->hide();
+    } else if (chartType == "MUSIC Cartesian Sum") {
+        chart = new QChart();
+        plot::line(chart, sumSpectrum);
+        if (ui->actionShow_MUSIC_Peaks->isChecked()) {
+            plot::box(chart, sumPeak, sumPeak, minYSum, maxYSum, "", brush::green);
+        }
+        plot::makeAxes(
+            chart,
+            "Winkel / °",
+            "MUSIC Pseudo-Spektrum / dB"
+            );
+        chart->legend()->hide();
+    } else if (chartType == "MUSIC Polar Seperate") {
+        QPolarChart* polarChart = new QPolarChart();
+        auto angularAxis = new QValueAxis();
+        angularAxis->setTickCount(9);
+        angularAxis->setLabelFormat("%.1f");
+        angularAxis->setRange(-180, 180);
+        float minY = std::numeric_limits<float>::max();
+        float maxY = std::numeric_limits<float>::lowest();
+        QVector<QAbstractSeries*> serieses;
+        for (int i = 0; i < batch.size(); ++i) {
+            // Spectrum
+            auto const entry = batch[i];
+            if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+                QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
+                QVector<QPair<int,float>> spectrum = entry.music.spectrum;
+                /*
+                if (_checkBoxBatchChartNormalization->isChecked()) {
+                    float localMax = -INFINITY;
+                    for (auto const& [angle, amp] : spectrum) {
+                        localMax = qMax(localMax, amp);
+                    }
+                    if (localMax != 0) {
+                        for (auto& [angle, amp] : spectrum) {
+                            amp /= localMax;
+                        }
+                    }
+                }
+                */
+                for (auto const& [angle, amp] : spectrum) {
+                    minY = qMin(minY, amp);
+                    maxY = qMax(maxY, amp);
+                }
+                serieses << plot::line(polarChart, spectrum, "", brush);
+            }
+            // Peak
+            if (entry.hasPong and ui->actionShow_MUSIC_Peaks->isChecked()) {
+                float const minY = /*_checkBoxBatchChartNormalization->isChecked() ? -1.0f : */minYSeperate;
+                QLineSeries *const peakLine = plot::box(polarChart, entry.music.peakAngle, entry.music.peakAngle, minY, 0.0f, QString::number(i), brush::green);
+                connect(peakLine, &QLineSeries::clicked, this, [entry](){
+                    qInfo() << "Peak" << entry.name;
+                });
+                serieses << peakLine;
+            }
+        }
+        auto radialAxis = new QValueAxis();
+        radialAxis->setTickCount(2);
+        radialAxis->setRange(minY, maxY);
+        polarChart->addAxis(angularAxis, QPolarChart::PolarOrientationAngular);
+        polarChart->addAxis(radialAxis, QPolarChart::PolarOrientationRadial);
+        polarChart->legend()->hide();
+        polarChart->setMargins(QMargins(3, 3, 3, 3));
+        for (auto const& series : serieses) {
+            series->attachAxis(angularAxis);
+            series->attachAxis(radialAxis);
+        }
+        transform.rotate(180);
+        chart = polarChart;
+    } else if (chartType == "MUSIC Polar Sum") {
+        QPolarChart* polarChart = new QPolarChart();
+        auto angularAxis = new QValueAxis();
+        angularAxis->setTickCount(9);
+        angularAxis->setLabelFormat("%.1f");
+        angularAxis->setRange(-180, 180);
+        QVector<QPair<int,float>> sumSpectrum;
+        for (auto const& [angle, amp] : batch[0].music.spectrum) {
+            sumSpectrum.append({angle, 0});
+        }
+        for (auto const& entry : batch) {
+            if (not entry.hasPong) {
+                continue;
+            }
+            for (int i = 0; i < entry.music.spectrum.size(); ++i) {
+                sumSpectrum[i].second += entry.music.spectrum[i].second;
+            }
+        }
+        /*
+        if (_checkBoxBatchChartNormalization->isChecked()) {
+            float localMax = std::numeric_limits<float>::lowest();
+            for (auto const& [angle, amp] : sumSpectrum) {
+                localMax = qMax(localMax, amp);
+            }
+            if (localMax != 0) {
+                for (auto& [angle, amp] : sumSpectrum) {
+                    amp /= localMax;
+                }
+            }
+        }
+        */
+        float minY = std::numeric_limits<float>::max();
+        float maxY = std::numeric_limits<float>::lowest();
+        for (auto const& [angle, amp] : sumSpectrum) {
+            minY = qMin(minY, amp);
+            maxY = qMax(maxY, amp);
+        }
+        QVector<QAbstractSeries*> serieses;
+        serieses << plot::line(polarChart, sumSpectrum);
+        int peakAngle = 0;
+        float peakVal = std::numeric_limits<float>::lowest();
+        for (auto const& [angle, amp] : sumSpectrum) {
+            if (amp > peakVal) {
+                peakVal = amp;
+                peakAngle = angle;
+            }
+        }
+        if (ui->actionShow_MUSIC_Peaks->isChecked()) {
+            serieses << plot::box(polarChart, peakAngle, peakAngle, minY, maxY);
+        }
+        auto radialAxis = new QValueAxis();
+        radialAxis->setTickCount(2);
+        radialAxis->setRange(minY, maxY);
+        polarChart->addAxis(angularAxis, QPolarChart::PolarOrientationAngular);
+        polarChart->addAxis(radialAxis, QPolarChart::PolarOrientationRadial);
+        polarChart->legend()->hide();
+        polarChart->setMargins(QMargins(3, 3, 3, 3));
+        for (auto const& series : serieses) {
+            series->attachAxis(angularAxis);
+            series->attachAxis(radialAxis);
+        }
+        transform.rotate(180);
+        chart = polarChart;
+    } else if (chartType == "Amplitude") {
+        chart = new QChart();
+
+        if (batch.size() == 1) {
+            NumList const Y = ui->actionLog_Amplitude->isChecked() ? batch[0].collection[0].abs().ln() : batch[0].collection[0].abs();
+            plot::line<float,float>(chart, X, Y, "Modul 0");
+            //plot::line<float,float>(chart, X, batch[0].collection[1].abs(), "Modul 1");
+            //plot::line<float,float>(chart, X, batch[0].collection[2].abs(), "Modul 2");
+        } else {
+            for (auto const& entry : batch) {
+                if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+                    QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
+                    for (auto const& complexList : entry.collection) {
+                        NumList const Y = ui->actionLog_Amplitude->isChecked() ? complexList.abs().ln() : complexList.abs();
+                        plot::line<float,float>(chart, X, Y, "", brush);
+                    }
+                }
+            }
+        }
+
+        if (ui->actionShow_Ranges->isChecked()) {
+            float maxY = M_SQRT2 * INT16_MAX;
+            if (ui->actionLog_Amplitude->isChecked()) {
+                maxY = qLn(maxY);
+            }
+            plot::box<float,int>(chart, resolution * caliStart, resolution * caliEnd, 0, maxY, "Calibration", brush::gray);
+            plot::box<float,int>(chart, resolution * pongStart, resolution * pongEnd, 0, maxY, "Pong", brush::black);
+        }
+        chart->legend()->hide();
+        plot::makeAxes(
+            chart,
+            "Zeit / ms"
+            );
+    } else if (chartType == "Reference Phases") {
+        chart = new QChart();
+        QList<float> referencePhases01;
+        QList<float> referencePhases02;
+        QList<float> calibratedPhases01;
+        QList<float> calibratedPhases02;
+        for (auto const& entry : batch) {
+            if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
+                continue;
+            }
+            auto const& collection = entry.collection;
+            referencePhases01 << gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
+            referencePhases02 << gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
+            calibratedPhases01 << wrapPi(gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd) - referencePhases01.last());
+            calibratedPhases02 << wrapPi(gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd) - referencePhases02.last());
+        }
+        plot::scatter(chart, referencePhases01,  "Reference 0-1");
+        plot::scatter(chart, referencePhases02,  "Reference 0-2");
+        plot::scatter(chart, calibratedPhases01, "Calibrated Pong 0-1");
+        plot::scatter(chart, calibratedPhases02, "Calibrated Pong 0-2");
+        plot::makeAxes(
+            chart,
+            "Peilung #",
+            "Phasendifferenz / rad"
+            );
+    } else if (chartType == "Peaks over time") {
+        chart = new QChart();
+        QList<float> pong;
+        QList<float> noPong;
+        for (auto const& entry : batch) {
+            if (entry.hasPong) {
+                pong << entry.music.peakAngle;
+                noPong << NAN;
+            } else {
+                noPong << entry.music.peakAngle;
+                pong << NAN;
+            }
+        }
+        plot::scatter(chart, pong, "", brush::blue);
+        plot::scatter(chart, noPong, "", brush::red);
+        plot::makeAxes(
+            chart,
+            "Peilung #",
+            "Winkel / °"
+            );
+    } else if (chartType == "Spectrogram") {
+        chart = new QChart();
+        int const nEntries = batch.size();
+        int const nAngles =  batch[0].music.spectrum.size();
+        int const angleMin = batch[0].music.spectrum.first().first;
+        int const angleMax = batch[0].music.spectrum.last().first;
+
+        QList<QList<float>> Z;
+        Z.reserve(nEntries);
+        for (int x = 0; x < nEntries; ++x) {
+            auto const& entry = batch[x];
+            QList<float> col;
+            col.reserve(nAngles);
+            for (int y = 0; y < nAngles; ++y) {
+                float amp = entry.music.spectrum[y].second;
+                if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
+                    amp = minYSeperate;
+                }
+                col.append(amp);
+            }
+            Z.append(col);
+        }
+        plot::heatmap(
+            chart,
+            Z,
+            {0, nEntries - 1},
+            {angleMin, angleMax},
+            "Peilung #",
+            "Winkel / °"
+            );
+    }
+    ui->chartWidget->chartView()->setTransform(transform);
+    ui->chartWidget->chartView()->setChart(chart);
 }
+

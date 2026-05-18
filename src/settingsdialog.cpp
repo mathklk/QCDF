@@ -49,6 +49,13 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         qWarning() << "COM.txt file not found in directory" << QDir::currentPath();
         show();
     }
+
+    ui->caliSliders->setRange(0, 7000);
+    ui->pongSliders->setRange(0, 7000);
+    ui->caliSliders->setValues(380, 280);
+    ui->pongSliders->setValues(5448, 246);
+    connect(ui->caliSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
+    connect(ui->pongSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -70,5 +77,9 @@ SettingsDialog::Settings SettingsDialog::settings() {
     s.arrayType            = ui->comboBoxArrayType->currentText();
     s.antennaSpacing       = ui->doubleSpinBoxDLambda->value();
     s.lns                  = ui->doubleSpinBoxLns->value();
+    s.calibration.center   = ui->caliSliders->first();
+    s.calibration.width    = ui->caliSliders->second();
+    s.pong.center          = ui->pongSliders->first();
+    s.pong.width           = ui->pongSliders->second();
     return s;
 }

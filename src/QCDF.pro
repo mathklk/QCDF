@@ -8,28 +8,42 @@ CONFIG += c++17
 
 SOURCES += \
     collector.cpp \
-    core.cpp \
+    doubleslider.cpp \
+    gr_doa.cpp \
+    gr_music.cpp \
     main.cpp \
     mainwindow.cpp \
+    music.cpp \
     node.cpp \
+    recorder.cpp \
     settingsdialog.cpp
 
 HEADERS += \
     collector.h \
-    core.h \
     crc32.h \
+    doubleslider.h \
     frame.h \
+    gr_doa.h \
+    gr_music.h \
     mainwindow.h \
+    metaTypes.h \
+    music.h \
     node.h \
+    plot.h \
+    recorder.h \
     settingsdialog.h
 
 FORMS += \
+    doubleslider.ui \
     mainwindow.ui \
     settingsdialog.ui
 
 DISTFILES += \
     .gitignore \
     $$OUT_PWD/COM.txt
+
+include(qt_zoomable_chart_widget/zoomable_chart_widget.pri)
+INCLUDEPATH += eigen-3.4.1/
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

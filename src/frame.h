@@ -167,6 +167,10 @@ struct Frame {
     // Content
     QByteArray data;
 
+    // Additional info
+    uint32_t calculatedCrc;
+    bool crcIsOk = false;
+
     // Cached complex representation (mutable so it can be updated in a const method)
     mutable ComplexList _complexCache;
     mutable bool _complexCacheValid = false;

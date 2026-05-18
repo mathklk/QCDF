@@ -21,12 +21,21 @@ public:
         QString arrayType;
         float antennaSpacing;
         float lns;
+        struct {
+            int center;
+            int width;
+        } calibration;
+        struct {
+            int center;
+            int width;
+        } pong;
     };
 
     Settings settings(void);
 
 signals:
     void changed(void);
+    void slidersChanged(void);
 
 private:
     Ui::SettingsDialog *ui;

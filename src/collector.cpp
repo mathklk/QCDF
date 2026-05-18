@@ -1,5 +1,7 @@
 #include "collector.h"
 
+#include <QDateTime>
+
 Collector::Collector(
     QVector<Node*> const& slaves,
     Node *const master,
@@ -28,11 +30,17 @@ void Collector::reset() {
 }
 
 void Collector::fetch() {
+    if (_fetchInProgress) {
+        qCritical() << "Collector::fetch called but fetch is already in progress.";
+        return;
+    }
+    _fetchInProgress = true;
+    _fetchStarted = QDateTime::currentDateTime();
     for (auto& frame : _frameBuffer) {
         frame = Frame();
     }
-    _fetchInProgress = true;
-    _master->write(QString('x').toLatin1());
+    QMetaObject::invokeMethod(_master, "write", Q_ARG(QByteArray, QString('x').toLatin1()));
+    //_master->write(QString('x').toLatin1());
     emit signalFetchStarted();
 }
 
@@ -45,5 +53,6 @@ void Collector::checkIfCollected() {
         return;
     }
     _fetchInProgress = false;
-    emit signalNewCollection();
+    emit signalNewCollection(collection());
+    qInfo() << "Collector: Total Fetch Time: " << _fetchStarted.msecsTo(QDateTime::currentDateTime()) << "ms";
 }
