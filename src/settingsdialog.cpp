@@ -54,8 +54,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     ui->pongSliders->setRange(0, 7000);
     ui->caliSliders->setValues(380, 280);
     ui->pongSliders->setValues(5448, 246);
-    connect(ui->caliSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
-    connect(ui->pongSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
+    //connect(ui->caliSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
+    //connect(ui->pongSliders, &DoubleSlider::changed, this, &SettingsDialog::slidersChanged);
 }
 
 SettingsDialog::~SettingsDialog()
