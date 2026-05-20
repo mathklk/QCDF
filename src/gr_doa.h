@@ -21,6 +21,10 @@ double _capon_ccf_impl_direction(const gr_complex* in0, const gr_complex* in1, i
  */
 float phaseDifference(ComplexList const& A, ComplexList const& B, int const start, int const end);
 
+gr_complex cLn(gr_complex const&);
+
+double circularMean(QVector<double> const& angles);
+
 double phaseDiffToDistance(double const dp, double const lambda);
 
 /*

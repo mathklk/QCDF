@@ -1,6 +1,7 @@
 QT       += core gui serialport charts concurrent
 
 CONFIG += c++17
+CONFIG += optimize_full
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -29,6 +30,7 @@ HEADERS += \
     metaTypes.h \
     music.h \
     node.h \
+    physics.h \
     plot.h \
     recorder.h \
     settingsdialog.h
@@ -37,6 +39,9 @@ FORMS += \
     doubleslider.ui \
     mainwindow.ui \
     settingsdialog.ui
+
+RESOURCES += \
+    res.qrc
 
 DISTFILES += \
     .gitignore \

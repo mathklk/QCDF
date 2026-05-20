@@ -12,7 +12,7 @@ Spectrum music(
     int& peak,
     double& minY,
     double& maxY
-    ) {
+) {
     QVector<float> phaseOffsets;
     phaseOffsets << 0;
     phaseOffsets << gr_doa::phaseDifference(collection[0], collection[1], cali.first, cali.second);

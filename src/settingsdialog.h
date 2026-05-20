@@ -29,6 +29,8 @@ public:
             int center;
             int width;
         } pong;
+
+        float lambda_m() const;
     };
 
     Settings settings(void);
@@ -36,6 +38,9 @@ public:
 signals:
     void changed(void);
     void slidersChanged(void);
+
+private slots:
+    void updateLambda();
 
 private:
     Ui::SettingsDialog *ui;

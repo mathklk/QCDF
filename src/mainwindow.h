@@ -77,8 +77,6 @@ private:
     SettingsDialog* _settingsDialog;
     QComboBox* _comboBoxBatchChartType;
 
-
-
     struct CacheEntry {
         QString name;
         QVector<ComplexList> collection;
@@ -89,6 +87,12 @@ private:
             double min;
             double max;
         } music;
+        struct {
+            double alpha01;
+            double alpha12;
+            double alpha02;
+            double alpha;
+        } pdoa;
     };
     QMap<QString, CacheEntry> _cache;
 };

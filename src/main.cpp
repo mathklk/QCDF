@@ -1,5 +1,7 @@
 #include <QApplication>
 #include <QThread>
+#include <QTranslator>
+#include <QLibraryInfo>
 
 #include "metaTypes.h"
 
@@ -11,6 +13,7 @@
 int main(int argc, char *argv[])
 {    
     QApplication a(argc, argv);
+    a.setWindowIcon(QIcon(":/icon.jpg"));
     registerMetaTypes();
 
     QVector<QThread*> threads;

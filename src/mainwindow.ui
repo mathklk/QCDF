@@ -18,11 +18,11 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_CDF">
        <attribute name="title">
-        <string>CDF</string>
+        <string>Analyse</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0" columnstretch="0,0,1">
         <item row="0" column="0">
@@ -31,50 +31,6 @@
            <string>Evaluate</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_14">
-           <item row="2" column="0" colspan="2">
-            <widget class="QGroupBox" name="groupBox_4">
-             <property name="title">
-              <string>MUSIC Seperate</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_15">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Mean&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="labelEvalMean">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_6">
-                <property name="text">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;StdDev&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLabel" name="labelEvalStdDev">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_12">
-             <property name="text">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Records&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <widget class="QLabel" name="labelEvalSamples">
              <property name="text">
@@ -85,7 +41,7 @@
            <item row="3" column="0" colspan="2">
             <widget class="QGroupBox" name="groupBox_5">
              <property name="title">
-              <string>MUSIC Sum</string>
+              <string>MUSIC Summe</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_16">
               <item row="0" column="1">
@@ -99,6 +55,101 @@
                <widget class="QLabel" name="label_5">
                 <property name="text">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QGroupBox" name="groupBox_4">
+             <property name="title">
+              <string>MUSIC Separat</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_15">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="labelEvalSepPeak">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_12">
+             <property name="text">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Aufzeichnungen&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>PDOA</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="0" column="1">
+               <widget class="QLabel" name="labelEvalPdoa01">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;02&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;01&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;12&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Mittel&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabel" name="labelEvalPdoa12">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLabel" name="labelEvalPdoa02">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLabel" name="labelEvalPdoaMean">
+                <property name="text">
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -141,26 +192,26 @@
       </widget>
       <widget class="QWidget" name="tab_Records">
        <attribute name="title">
-        <string>Records</string>
+        <string>Aufzeichnungen</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,1">
         <item row="0" column="1">
          <widget class="QGroupBox" name="groupBox_2">
           <property name="title">
-           <string>Load</string>
+           <string>Laden</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_5">
            <item row="0" column="0">
             <widget class="QPushButton" name="pushButtonLoadFiles">
              <property name="text">
-              <string>Files...</string>
+              <string>Dateien...</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
             <widget class="QPushButton" name="pushButtonLoadDir">
              <property name="text">
-              <string>Directory...</string>
+              <string>Verzeichnis...</string>
              </property>
             </widget>
            </item>
@@ -183,7 +234,7 @@
         <item row="0" column="0" rowspan="2">
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
-           <string>Record</string>
+           <string>Aufnehmen</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
            <item row="1" column="1">
@@ -192,7 +243,7 @@
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Stop</string>
+              <string>Stopp</string>
              </property>
             </widget>
            </item>
@@ -260,7 +311,7 @@
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Save...</string>
+              <string>Speichern...</string>
              </property>
             </widget>
            </item>
@@ -358,14 +409,11 @@
       </widget>
       <widget class="QWidget" name="tab_Console">
        <attribute name="title">
-        <string>Console</string>
+        <string>Konsole</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <widget class="QTextEdit" name="textEdit_1"/>
-        </item>
-        <item row="1" column="0">
-         <widget class="QProgressBar" name="progressBar_1">
+        <item row="1" column="1">
+         <widget class="QProgressBar" name="progressBar_2">
           <property name="maximum">
            <number>1</number>
           </property>
@@ -376,6 +424,21 @@
            <string>%v / %m</string>
           </property>
          </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLineEdit" name="lineEdit_4"/>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLineEdit" name="lineEdit_3"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLineEdit" name="lineEdit_1"/>
+        </item>
+        <item row="3" column="1">
+         <widget class="QTextEdit" name="textEdit_4"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QTextEdit" name="textEdit_1"/>
         </item>
         <item row="4" column="1">
          <widget class="QProgressBar" name="progressBar_4">
@@ -390,33 +453,8 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QLineEdit" name="lineEdit_3"/>
-        </item>
-        <item row="1" column="1">
-         <widget class="QProgressBar" name="progressBar_2">
-          <property name="maximum">
-           <number>1</number>
-          </property>
-          <property name="value">
-           <number>0</number>
-          </property>
-          <property name="format">
-           <string>%v / %m</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QTextEdit" name="textEdit_4"/>
-        </item>
-        <item row="5" column="1">
-         <widget class="QLineEdit" name="lineEdit_4"/>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLineEdit" name="lineEdit_1"/>
-        </item>
-        <item row="4" column="0">
-         <widget class="QProgressBar" name="progressBar_3">
+        <item row="1" column="0">
+         <widget class="QProgressBar" name="progressBar_1">
           <property name="maximum">
            <number>1</number>
           </property>
@@ -431,18 +469,45 @@
         <item row="0" column="1">
          <widget class="QTextEdit" name="textEdit_2"/>
         </item>
-        <item row="3" column="0">
-         <widget class="QTextEdit" name="textEdit_3"/>
-        </item>
         <item row="2" column="1">
          <widget class="QLineEdit" name="lineEdit_2"/>
         </item>
-        <item row="6" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEditBroadcast">
-          <property name="placeholderText">
-           <string>Broadcast</string>
+        <item row="4" column="0">
+         <widget class="QProgressBar" name="progressBar_3">
+          <property name="maximum">
+           <number>1</number>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+          <property name="format">
+           <string>%v / %m</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QTextEdit" name="textEdit_3"/>
+        </item>
+        <item row="6" column="0" colspan="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLineEdit" name="lineEditBroadcast">
+            <property name="placeholderText">
+             <string>Broadcast</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonClearConsole">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="QIcon::ThemeIcon::EditDelete"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -467,7 +532,7 @@
    </widget>
    <widget class="QMenu" name="menuChart">
     <property name="title">
-     <string>Chart</string>
+     <string>Diagramm</string>
     </property>
     <addaction name="actionShow_Pong_Only"/>
     <addaction name="actionShow_MUSIC_Peaks"/>
@@ -482,7 +547,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSettings">
    <property name="text">
-    <string>Settings</string>
+    <string>Einstellungen</string>
    </property>
   </action>
   <action name="actionShow_Pong_Only">
@@ -490,7 +555,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show Pong Only</string>
+    <string>Nur mit Ortungssignal</string>
    </property>
   </action>
   <action name="actionShow_MUSIC_Peaks">
@@ -501,7 +566,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show MUSIC Peaks</string>
+    <string>MUSIC Peaks anzeigen</string>
    </property>
   </action>
   <action name="actionLog_Amplitude">
@@ -509,7 +574,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Log Amplitude</string>
+    <string>Amplitude logarithmieren</string>
    </property>
   </action>
   <action name="actionShow_Ranges">
@@ -520,12 +585,12 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show Ranges</string>
+    <string>Zeitfenster anzeigen</string>
    </property>
   </action>
   <action name="actionClear_Cache">
    <property name="text">
-    <string>Clear Cache</string>
+    <string>Cache leeren</string>
    </property>
   </action>
  </widget>

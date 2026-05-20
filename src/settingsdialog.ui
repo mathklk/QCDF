@@ -6,18 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>394</width>
-    <height>281</height>
+    <width>395</width>
+    <height>313</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Settings</string>
+   <string>Einstellungen</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
-      <string>Serial Ports</string>
+      <string>Serielle Schnittstellen</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
       <item row="0" column="1">
@@ -66,13 +66,13 @@
    <item row="3" column="0" colspan="4">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
-      <string>Processing</string>
+      <string>Verarbeitung</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
        <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>LNS Treshold</string>
+         <string>LNS Grenzwert</string>
         </property>
        </widget>
       </item>
@@ -83,6 +83,9 @@
        <widget class="QDoubleSpinBox" name="doubleSpinBoxLns">
         <property name="buttonSymbols">
          <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
+        </property>
+        <property name="singleStep">
+         <double>0.050000000000000</double>
         </property>
         <property name="value">
          <double>0.350000000000000</double>
@@ -102,12 +105,16 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="1" column="1">
-       <widget class="QComboBox" name="comboBoxArrayType"/>
+       <widget class="QComboBox" name="comboBoxArrayType">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New';&quot;&gt;ULA: A-B-C&lt;/span&gt;&lt;/pre&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Courier New';&quot;&gt;&lt;br/&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;A&lt;br/&gt;UCA:&amp;nbsp;&amp;nbsp;/ \&lt;br/&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;C - B&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Carrier Frequency</string>
+         <string>Trägerfrequenz</string>
         </property>
        </widget>
       </item>
@@ -130,14 +137,17 @@
       <item row="3" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Antenna Spacing</string>
+         <string>Antennen Abstand</string>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New';&quot;&gt;ULA: A-B-C&lt;/span&gt;&lt;/pre&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Courier New';&quot;&gt;&lt;br/&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;A&lt;br/&gt;UCA:&amp;nbsp;&amp;nbsp;/ \&lt;br/&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;C - B&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
-         <string>Array Type</string>
+         <string>Array Typ</string>
         </property>
        </widget>
       </item>
@@ -154,6 +164,9 @@
         </property>
         <property name="maximum">
          <double>0.500000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
         </property>
         <property name="value">
          <double>0.500000000000000</double>
@@ -181,7 +194,7 @@
      <item>
       <widget class="QPushButton" name="pushButtonApply">
        <property name="text">
-        <string>Apply</string>
+        <string>Anwenden</string>
        </property>
       </widget>
      </item>

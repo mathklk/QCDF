@@ -47,7 +47,7 @@ bool Node::open() {
             return;
         }
         emit active(false);
-        qDebug() << _portName << "Error :" << _port->errorString();
+        qCritical() << _portName << "Error :" << _port->errorString();
     });
 
     bool const ok = _port->open(QIODevice::ReadWrite);

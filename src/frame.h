@@ -56,7 +56,7 @@ public:
     }
 
     // Arithmetic Mean
-    float mean(void) {
+    float mean(void) const {
         float sum = 0;
         for (auto const& x : *this) {
             sum += x;
@@ -65,7 +65,7 @@ public:
     }
 
     // Standard Deviation
-    float stdDev(void) {
+    float stdDev(void) const {
         float const m = mean();
 
         float variance = 0;

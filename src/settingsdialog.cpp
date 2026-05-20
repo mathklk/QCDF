@@ -1,6 +1,8 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 
+#include "physics.h"
+
 #include <QFile>
 #include <QDir>
 
@@ -14,6 +16,9 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         "ULA",
         "UCA"
     });
+    connect(ui->doubleSpinBoxFrequency, &QDoubleSpinBox::valueChanged, this, &SettingsDialog::updateLambda);
+    connect(ui->doubleSpinBoxDLambda,   &QDoubleSpinBox::valueChanged, this, &SettingsDialog::updateLambda);
+    updateLambda();
 
     connect(ui->pushButtonApply, &QPushButton::clicked, this, [this](){
         emit changed();
@@ -63,6 +68,12 @@ SettingsDialog::~SettingsDialog()
     delete ui;
 }
 
+void SettingsDialog::updateLambda() {
+    double const lambda_cm = 100 * physics::speedOfLightInAir_mps / (ui->doubleSpinBoxFrequency->value() * 1e6);
+    ui->doubleSpinBoxFrequency->setToolTip(QString::number(lambda_cm, 'f', 2) + " cm");
+    ui->doubleSpinBoxDLambda  ->setToolTip(QString::number(lambda_cm * ui->doubleSpinBoxDLambda->value(), 'f', 2) + " cm");
+}
+
 SettingsDialog::Settings SettingsDialog::settings() {
     Settings s;
     for (QLineEdit *const le : {
@@ -82,4 +93,8 @@ SettingsDialog::Settings SettingsDialog::settings() {
     s.pong.center          = ui->pongSliders->first();
     s.pong.width           = ui->pongSliders->second();
     return s;
+}
+
+float SettingsDialog::Settings::lambda_m() const {
+    return physics::speedOfLightInAir_mps / (carrierFrequency_MHz * 1e6);
 }
