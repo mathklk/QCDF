@@ -32,6 +32,7 @@ HEADERS += \
     node.h \
     physics.h \
     plot.h \
+    polar.h \
     recorder.h \
     settingsdialog.h
 

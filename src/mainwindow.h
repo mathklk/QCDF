@@ -91,7 +91,7 @@ private:
             double alpha01;
             double alpha12;
             double alpha02;
-            double alpha;
+            double alphaMean;
         } pdoa;
     };
     QMap<QString, CacheEntry> _cache;
