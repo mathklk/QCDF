@@ -248,12 +248,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     ui->chartWidget->addToolWidget(_comboBoxBatchChartType);
     connect(_comboBoxBatchChartType, &QComboBox::currentTextChanged, this, &MainWindow::calc);
     connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::calc);
-
-    connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this](int index){
-        if (index == 0) {
-            calc();
-        }
-    });
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
 
     // Actions
     QList<QAction*> reCalcActions = {
@@ -291,6 +286,10 @@ void MainWindow::settingsChanged()
         _nodes[i]->setPortName(serialPorts[i]);
     }
     emit reconnectNodes();
+}
+
+bool MainWindow::currentTabIsAnalyisTab() const {
+    return ui->tabWidget->widget(ui->tabWidget->currentIndex())->objectName() == "Analyse";
 }
 
 void MainWindow::loadFiles(QStringList const& files) {
@@ -342,7 +341,7 @@ void setLabelMeanAndStdDev(QLabel *const label, NumList<T> const& values){
 };
 
 void MainWindow::calc() {
-    if (ui->tabWidget->currentIndex() != 0) {
+    if (not currentTabIsAnalyisTab()) {
         return;
     }
 

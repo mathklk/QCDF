@@ -37,6 +37,7 @@ signals:
 
 private:
     void settingsChanged();
+    bool currentTabIsAnalyisTab(void) const;
     void loadFiles(QStringList const&);
     void calc();
 
