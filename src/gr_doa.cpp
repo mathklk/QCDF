@@ -44,38 +44,6 @@ double gr_doa::_capon_ccf_impl_direction(const gr_complex* in0, const gr_complex
     return std::arg((max_lambda - covar[0][0])/covar[0][1]);
 }
 
-gr_complex gr_doa::cLn(gr_complex const& z) {
-    float const A = std::abs(z);
-    if (A == 0.0f) {
-        // ln(0) ist nicht definiert; Rueckgabe von 0 als sinnvolle Konvention.
-        return {0.0f, 0.0f};
-    }
-    float const scale = qLn(A) / A;  // Skalierungsfaktor (reell)
-    return z * scale;
-}
-
-double gr_doa::circularMean(QVector<double> const& angles) {
-    if (angles.empty()) {
-        return NAN;
-    }
-
-    double sum_sin = 0.0;
-    double sum_cos = 0.0;
-
-    for (double angle : angles) {
-        sum_sin += qSin(angle);
-        sum_cos += qCos(angle);
-    }
-
-    // Optional: Check if the sum vector is close to zero (mean is undefined)
-    // if (std::abs(sum_sin) < 1e-9 && std::abs(sum_cos) < 1e-9) {
-    //     return std::numeric_limits<double>::quiet_NaN();
-    // }
-
-    // atan2 handles the quadrants correctly based on the signs of sin and cos
-    return qAtan2(sum_sin, sum_cos);
-}
-
 
 float gr_doa::phaseDifference(ComplexList const& A, ComplexList const& B, int const start, int const end) {
     if (A.size() != B.size()) {

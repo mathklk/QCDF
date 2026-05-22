@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include "plot.h"
+#include "polar.h"
 
 #include <QFontDatabase>
 #include <QFileDialog>
@@ -329,15 +330,9 @@ void MainWindow::loadFiles(QStringList const& files) {
     }
 }
 
-static double wrapPi (double x) {
-    while (x <= -M_PI) x += 2*M_PI;
-    while (x > M_PI) x -= 2*M_PI;
-    return x;
-}
-
 template <typename T>
-void setLabelMeanAndStdDev(QLabel *const label, NumList<T> const& values){
-    label->setText(QString::number(values.mean(), 'f', 2) + "° ± " + QString::number(values.stdDev(), 'f', 2) + "°");
+void setLabelMeanAndStdDev(QLabel *const label, NumList<T> const& anglesDeg){
+    label->setText(QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2) + "° ± " + QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2) + "°");
 };
 
 void MainWindow::calc() {
@@ -422,11 +417,10 @@ void MainWindow::calc() {
         double const pongPhase02 = gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd);
 
         double const lambda_m = settings.lambda_m();
-        entry.pdoa.alpha01 = gr_doa::angle(wrapPi(pongPhase01 - caliPhase01                ), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha12 = gr_doa::angle(wrapPi(pongPhase12 - (caliPhase02 - caliPhase01)), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha02 = gr_doa::angle(wrapPi(pongPhase02 - caliPhase02                ), lambda_m, settings.antennaSpacing * lambda_m * 2);
-        entry.pdoa.alpha = gr_doa::circularMean({entry.pdoa.alpha01, entry.pdoa.alpha12, entry.pdoa.alpha02});
-
+        entry.pdoa.alpha01 = gr_doa::angle(polar::wrapPi(pongPhase01 - caliPhase01                ), lambda_m, settings.antennaSpacing * lambda_m    );
+        entry.pdoa.alpha12 = gr_doa::angle(polar::wrapPi(pongPhase12 - (caliPhase02 - caliPhase01)), lambda_m, settings.antennaSpacing * lambda_m    );
+        entry.pdoa.alpha02 = gr_doa::angle(polar::wrapPi(pongPhase02 - caliPhase02                ), lambda_m, settings.antennaSpacing * lambda_m * 2);
+        entry.pdoa.alphaMean = polar::circularMeanDeg(QList<double>{entry.pdoa.alpha01, entry.pdoa.alpha12, entry.pdoa.alpha02});
         _cache[cacheKey] = entry;
         batch << entry;
     }
@@ -481,7 +475,7 @@ void MainWindow::calc() {
             pdoa01 << entry.pdoa.alpha01;
             pdoa12 << entry.pdoa.alpha12;
             pdoa02 << entry.pdoa.alpha02;
-            pdoaMean << entry.pdoa.alpha;
+            pdoaMean << entry.pdoa.alphaMean;
         }
     }
 
@@ -779,7 +773,7 @@ void MainWindow::calc() {
                     }
                     gr_complex shifted = x * std::polar(1.0f, -phaseOffsets[ant]);
                     if (ui->actionLog_Amplitude->isChecked()) {
-                        shifted = gr_doa::cLn(shifted);
+                        shifted = polar::cLn(shifted);
                     }
 
                     I.append(shifted.real());
@@ -804,8 +798,8 @@ void MainWindow::calc() {
             auto const& collection = entry.collection;
             referencePhases01 << gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
             referencePhases02 << gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
-            calibratedPhases01 << wrapPi(gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd) - referencePhases01.last());
-            calibratedPhases02 << wrapPi(gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd) - referencePhases02.last());
+            calibratedPhases01 << polar::wrapPi(gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd) - referencePhases01.last());
+            calibratedPhases02 << polar::wrapPi(gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd) - referencePhases02.last());
         }
         plot::scatter(chart, referencePhases01,  "Reference 0-1");
         plot::scatter(chart, referencePhases02,  "Reference 0-2");
