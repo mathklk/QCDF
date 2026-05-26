@@ -18,7 +18,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_Records">
        <attribute name="title">
@@ -294,7 +294,7 @@
               <item row="0" column="1">
                <widget class="QLabel" name="labelEvalSepPeak">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;Mittelwert&amp;gt; +- &amp;lt;Standardabweichung&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;zirk. Mittel.&amp;gt; +- &amp;lt;zirk. St.Abw.&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -320,7 +320,7 @@
               <item row="0" column="1">
                <widget class="QLabel" name="labelEvalPdoa01">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;Mittelwert&amp;gt; +- &amp;lt;Standardabweichung&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;zirk. Mittel.&amp;gt; +- &amp;lt;zirk. St.Abw.&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -358,7 +358,7 @@
               <item row="1" column="1">
                <widget class="QLabel" name="labelEvalPdoa12">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;Mittelwert&amp;gt; +- &amp;lt;Standardabweichung&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;zirk. Mittel.&amp;gt; +- &amp;lt;zirk. St.Abw.&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -368,7 +368,7 @@
               <item row="2" column="1">
                <widget class="QLabel" name="labelEvalPdoa02">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;Mittelwert&amp;gt; +- &amp;lt;Standardabweichung&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;zirk. Mittel.&amp;gt; +- &amp;lt;zirk. St.Abw.&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -378,7 +378,7 @@
               <item row="3" column="1">
                <widget class="QLabel" name="labelEvalPdoaMean">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;Mittelwert&amp;gt; +- &amp;lt;Standardabweichung&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&amp;lt;zirk. Mittel.&amp;gt; +- &amp;lt;zirk. St.Abw.&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -536,7 +536,7 @@
      <x>0</x>
      <y>0</y>
      <width>625</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSystem">
