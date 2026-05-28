@@ -12,10 +12,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->comboBoxArrayType->addItems({
-        "ULA",
-        "UCA"
-    });
+    ui->comboBoxArrayType->addItem("ULA", QVariant::fromValue(AntennaArrayType::ULA));
+    ui->comboBoxArrayType->addItem("UCA", QVariant::fromValue(AntennaArrayType::UCA));
     connect(ui->doubleSpinBoxFrequency, &QDoubleSpinBox::valueChanged, this, &SettingsDialog::updateLambda);
     connect(ui->doubleSpinBoxDLambda,   &QDoubleSpinBox::valueChanged, this, &SettingsDialog::updateLambda);
     updateLambda();
@@ -85,7 +83,7 @@ SettingsDialog::Settings SettingsDialog::settings() {
         if (not le->text().isEmpty()) s.serialPorts << le->text();
     }
     s.carrierFrequency_MHz = ui->doubleSpinBoxFrequency->value();
-    s.arrayType            = ui->comboBoxArrayType->currentText();
+    s.arrayType            = static_cast<AntennaArrayType>(ui->comboBoxArrayType->currentData().value<int>());
     s.antennaSpacing       = ui->doubleSpinBoxDLambda->value();
     s.lns                  = ui->doubleSpinBoxLns->value();
     s.calibration.center   = ui->caliSliders->first();

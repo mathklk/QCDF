@@ -4,7 +4,7 @@
 #include "gr_music.h"
 
 Spectrum music(
-    QString const& array,
+    AntennaArrayType const array,
     float const dLambda,
     QVector<ComplexList> const& collection,
     QPair<int, int> cali,
@@ -28,14 +28,16 @@ Spectrum music(
     // Instantiate the selected MUSIC array model
     Music* music = nullptr;
     //QString const selectedArray = ui->comboBoxArrayType->currentText();
-    if (array == "ULA") {
+    if (array == AntennaArrayType::ULA) {
         pspectrum_len = 180 + 1;  // -90 to +90 inclusive
         angleOffset_deg = -90; // Center spectrum around broadside
         music = new MusicLinArray(dLambda, 1, 3, pspectrum_len);
-    } else if (array == "UCA") {
+    } else if (array == AntennaArrayType::UCA) {
         pspectrum_len = 360; // -180 to +180 inclusive (no +1 bc of wraparound)
         angleOffset_deg = 0;
         music = new MusicTriangle(dLambda, num_targets, pspectrum_len);
+    } else {
+        qCritical() << "Unsupported array type" << int(array);
     }
 
 

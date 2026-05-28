@@ -2,6 +2,7 @@
 #define SETTINGSDIALOG_H
 
 #include <QWidget>
+#include "antenna_array_type.h"
 
 namespace Ui {
 class SettingsDialog;
@@ -18,7 +19,7 @@ public:
     struct Settings {
         QStringList serialPorts;
         float carrierFrequency_MHz;
-        QString arrayType;
+        AntennaArrayType arrayType;
         float antennaSpacing;
         float lns;
         struct {

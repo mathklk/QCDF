@@ -20,6 +20,7 @@ SOURCES += \
     settingsdialog.cpp
 
 HEADERS += \
+    antenna_array_type.h \
     collector.h \
     crc32.h \
     doubleslider.h \

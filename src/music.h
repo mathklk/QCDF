@@ -4,6 +4,7 @@
 #include <QVector>
 #include <QPair>
 
+#include "antenna_array_type.h"
 #include "frame.h"
 
 typedef QVector<QPair<int,float>> Spectrum;
@@ -17,7 +18,7 @@ typedef QVector<QPair<int,float>> Spectrum;
  * @return
  */
 Spectrum music(
-    QString const& array,
+    AntennaArrayType const array,
     float const dLambda,
     QVector<ComplexList> const& collection,
     QPair<int, int> cali,
@@ -25,7 +26,7 @@ Spectrum music(
     int& peak,
     double& minY,
     double& maxY
-    );
+);
 
 /**
  * @brief Normalizes a spectrum to -1..0

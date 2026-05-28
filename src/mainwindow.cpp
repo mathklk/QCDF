@@ -421,6 +421,11 @@ void MainWindow::calc() {
         entry.pdoa.alpha12 = gr_doa::angle(polar::wrapPi(pongPhase12 - (caliPhase02 - caliPhase01)), lambda_m, settings.antennaSpacing * lambda_m    );
         entry.pdoa.alpha02 = gr_doa::angle(polar::wrapPi(pongPhase02 - caliPhase02                ), lambda_m, settings.antennaSpacing * lambda_m * 2);
         entry.pdoa.alphaMean = polar::circularMeanDeg(QList<double>{entry.pdoa.alpha01, entry.pdoa.alpha12, entry.pdoa.alpha02});
+        // Correct for different baseline orientations of UCA array
+        if (settings.arrayType == AntennaArrayType::UCA) {
+            entry.pdoa.alpha01 = polar::wrap180(entry.pdoa.alpha01 + 60);
+            entry.pdoa.alpha02 = polar::wrap180(entry.pdoa.alpha02 + 60);
+        }
         _cache[cacheKey] = entry;
         batch << entry;
     }
