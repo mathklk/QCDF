@@ -106,7 +106,7 @@ static QScatterSeries* scatter(
         series->setBorderColor(series->color());
     }
     size_t i = 0;
-    for (int const& x : X) {
+    for (XT const& x : X) {
         series->append(x, Y[i++]);
     }
     chart->addSeries(series);
