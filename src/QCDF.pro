@@ -31,6 +31,7 @@ HEADERS += \
     metaTypes.h \
     music.h \
     node.h \
+    numlist.h \
     physics.h \
     plot.h \
     polar.h \

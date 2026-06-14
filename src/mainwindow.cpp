@@ -250,6 +250,8 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(_comboBoxBatchChartType, &QComboBox::currentTextChanged, this, &MainWindow::calc);
     connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::calc);
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
+    connect(ui->doubleSpinBoxTrueAlpha, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
+    connect(ui->doubleSpinBoxMusicKernel, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
 
     // Actions
     QList<QAction*> reCalcActions = {
@@ -265,6 +267,9 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         _cache.clear();
         calc();
     });
+
+    // I'll never remember doing this in the .ui
+    ui->tabWidget->setCurrentIndex(0);
 
     settingsChanged();
 }
@@ -330,9 +335,14 @@ void MainWindow::loadFiles(QStringList const& files) {
     }
 }
 
-template <typename T>
-void setLabelMeanAndStdDev(QLabel *const label, NumList<T> const& anglesDeg){
-    label->setText(QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2) + "° ± " + QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2) + "°");
+void setLabelMeanAndStdDev(QLabel *const label, NumList<double> const& anglesDeg, double const truth) {
+    label->setText(
+        QString("%1° ± %2° | %3°").arg(
+            QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2),
+            QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2),
+            QString::number(polar::rmse(anglesDeg, truth), 'f', 2)
+        )
+    );
 };
 
 void MainWindow::calc() {
@@ -446,10 +456,10 @@ void MainWindow::calc() {
     }
 
     // Individual peaks
-    NumList<int> peaks;
+    NumList<double> peaks;
     for (auto const& entry : batch) {
         if (entry.hasPong) {
-            peaks << entry.music.peakAngle;
+            peaks << double(entry.music.peakAngle);
         }
     }
 
@@ -502,11 +512,12 @@ void MainWindow::calc() {
     ui->labelEvalSamples ->setText(QString::number(peaks.size()) + " / " + QString::number(batch.size()));
     ui->labelEvalSamples ->setToolTip(names.join("\n"));
     ui->labelEvalSumPeak ->setText(QString::number(sumPeak) + "°");
-    setLabelMeanAndStdDev(ui->labelEvalSepPeak , peaks   );
-    setLabelMeanAndStdDev(ui->labelEvalPdoa01  , pdoa01  );
-    setLabelMeanAndStdDev(ui->labelEvalPdoa12  , pdoa12  );
-    setLabelMeanAndStdDev(ui->labelEvalPdoa02  , pdoa02  );
-    setLabelMeanAndStdDev(ui->labelEvalPdoaMean, pdoaMean);
+    int const truth = ui->doubleSpinBoxTrueAlpha->value();
+    setLabelMeanAndStdDev(ui->labelEvalSepPeak , peaks   , truth);
+    setLabelMeanAndStdDev(ui->labelEvalPdoa01  , pdoa01  , truth);
+    setLabelMeanAndStdDev(ui->labelEvalPdoa12  , pdoa12  , truth);
+    setLabelMeanAndStdDev(ui->labelEvalPdoa02  , pdoa02  , truth);
+    setLabelMeanAndStdDev(ui->labelEvalPdoaMean, pdoaMean, truth);
 
     // Plot Batch
     QChart *chart = nullptr;

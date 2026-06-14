@@ -3,6 +3,8 @@
 #ifndef POLAR_H
 #define POLAR_H
 
+#include "numlist.h"
+
 #include <QList>
 #include <QtMath>
 
@@ -55,6 +57,16 @@ double circularStdDevDeg(QList<T> const& angles) {
     double R = std::sqrt(sum_sin * sum_sin + sum_cos * sum_cos) / angles.size();
     R = qMin(1.0, R); // catches rare floating point accumulations >1
     return qRadiansToDegrees(std::sqrt(-2.0 * qLn(R)));
+}
+
+// Root Mean Square Error
+template <typename T>
+double rmse(QList<T> const& samples, T const& truth) {
+    NumList<T> squaredErrors;
+    for (const auto& sample : samples) {
+        squaredErrors << (sample - truth) * (sample - truth);
+    }
+    return std::sqrt(squaredErrors.mean());
 }
 
 // Amplitude einer komplexen Zahl logarithmieren
