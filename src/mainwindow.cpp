@@ -8,6 +8,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPolarChart>
+#include <QClipboard>
 
 namespace brush {
     QBrush gray    (QColor::fromRgb(0x7f, 0x7f, 0x7f));
@@ -252,6 +253,16 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxTrueAlpha, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxMusicKernel, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
+    connect(ui->pushButtonCopyStats, &QPushButton::clicked, this, [this](){
+        // Copy evaluation stats to clipboard
+        QStringList stats;
+        stats << ui->labelEvalSamples->toolTip();
+        stats << ui->labelEvalSepPeak->toolTip();
+        stats << ui->labelEvalSumPeak->toolTip();
+        stats << ui->labelEvalPdoaMean->toolTip();
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        clipboard->setText(stats.join("\n"));
+    });
 
     // Actions
     QList<QAction*> reCalcActions = {
@@ -266,6 +277,9 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(ui->actionClear_Cache, &QAction::triggered, this, [this](){
         _cache.clear();
         calc();
+    });
+    connect(ui->actionDebug, &QAction::triggered, this, [this](){
+        qDebug() << _cache.keys();
     });
 
     // I'll never remember doing this in the .ui
@@ -338,6 +352,13 @@ void MainWindow::loadFiles(QStringList const& files) {
 void setLabelMeanAndStdDev(QLabel *const label, NumList<double> const& anglesDeg, double const truth) {
     label->setText(
         QString("%1° ± %2° | %3°").arg(
+            QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2),
+            QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2),
+            QString::number(polar::rmse(anglesDeg, truth), 'f', 2)
+        )
+    );
+    label->setToolTip(
+        QString("%1\n%2\n%3").arg(
             QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2),
             QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2),
             QString::number(polar::rmse(anglesDeg, truth), 'f', 2)
@@ -510,8 +531,9 @@ void MainWindow::calc() {
         names << entry.name;
     }
     ui->labelEvalSamples ->setText(QString::number(peaks.size()) + " / " + QString::number(batch.size()));
-    ui->labelEvalSamples ->setToolTip(names.join("\n"));
+    ui->labelEvalSamples ->setToolTip(QString::number(peaks.size()));
     ui->labelEvalSumPeak ->setText(QString::number(sumPeak) + "°");
+    ui->labelEvalSumPeak ->setToolTip(QString::number(sumPeak));
     int const truth = ui->doubleSpinBoxTrueAlpha->value();
     setLabelMeanAndStdDev(ui->labelEvalSepPeak , peaks   , truth);
     setLabelMeanAndStdDev(ui->labelEvalPdoa01  , pdoa01  , truth);
