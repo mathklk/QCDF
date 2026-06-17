@@ -208,7 +208,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(ui->pushButtonLoadFiles, &QPushButton::clicked, this, [this]{
         QStringList const files = QFileDialog::getOpenFileNames(nullptr, "Select recordings to load");
         if (not files.isEmpty()) {
-            loadFiles(files);
+            putFilesIntoListWidget(files);
         }
     });
     connect(ui->pushButtonLoadDir, &QPushButton::clicked, this, [this]{
@@ -225,7 +225,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
             for (QString const& file : files) {
                 absoluteFiles << QDir(directory).absoluteFilePath(file);
             }
-            loadFiles(absoluteFiles);
+            putFilesIntoListWidget(absoluteFiles);
         }
     });
     connect(ui->pushButtonClearLoad, &QPushButton::clicked, this, [this](){
@@ -253,16 +253,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxTrueAlpha, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxMusicKernel, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
-    connect(ui->pushButtonCopyStats, &QPushButton::clicked, this, [this](){
-        // Copy evaluation stats to clipboard
-        QStringList stats;
-        stats << ui->labelEvalSamples->toolTip();
-        stats << ui->labelEvalSepPeak->toolTip();
-        stats << ui->labelEvalSumPeak->toolTip();
-        stats << ui->labelEvalPdoaMean->toolTip();
-        QClipboard *clipboard = QGuiApplication::clipboard();
-        clipboard->setText(stats.join("\n"));
-    });
+    connect(ui->pushButtonAuto, &QPushButton::clicked, this, &MainWindow::autoCalc);
 
     // Actions
     QList<QAction*> reCalcActions = {
@@ -293,8 +284,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::settingsChanged()
-{
+void MainWindow::settingsChanged() {
     QStringList const serialPorts = _settingsDialog->settings().serialPorts;
     if (serialPorts.size() != 4) {
         return;
@@ -312,88 +302,131 @@ bool MainWindow::currentTabIsAnalyisTab() const {
     return ui->tabWidget->widget(ui->tabWidget->currentIndex())->objectName() == "Analyse";
 }
 
-void MainWindow::loadFiles(QStringList const& files) {
+QVector<ComplexList> MainWindow::collectionFromFile(QString const& filePath) const {
+    QFile file(filePath);
+    if (not file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Couldn't open file" << file.fileName() << file.errorString();
+        return {};
+    }
+    QByteArray const bytes = file.readAll();
+    file.close();
+    QJsonDocument const doc = QJsonDocument::fromJson(bytes);
+    if (not doc.isArray()) {
+        qWarning() << "File" << file.errorString() << "does not contain an array";
+        return {};
+    }
+    QJsonArray const& array = doc.array();
+    if (array.size() != 3) {
+        qWarning() << "File" << file.errorString() << "does not contain three subarrays" << array.size();
+        return {};
+    }
+    return {
+        ComplexList::fromJson(array[0].toArray()),
+        ComplexList::fromJson(array[1].toArray()),
+        ComplexList::fromJson(array[2].toArray()),
+    };
+}
+
+void MainWindow::putFilesIntoListWidget(QStringList const& files) {
     ui->listWidgetLoad->clear();
     ui->pushButtonClearLoad->setEnabled(not files.isEmpty());
     ui->progressBarLoad->setMaximum(files.size());
     int i = 0;
     for (QString const& fileName : files) {
         ui->progressBarLoad->setValue(++i);
-        QFile file(fileName);
-        if (not file.open(QIODevice::ReadOnly)) {
-            qWarning() << "Couldn't open file" << file.fileName() << file.errorString();
-            continue;
-        }
-        QByteArray const bytes = file.readAll();
-        file.close();
-        QJsonDocument const doc = QJsonDocument::fromJson(bytes);
-        if (not doc.isArray()) {
-            qWarning() << "File" << file.errorString() << "does not contain an array";
-            continue;
-        }
-        QJsonArray const& array = doc.array();
-        if (array.size() != 3) {
-            qWarning() << "File" << file.errorString() << "does not contain three subarrays" << array.size();
-            continue;
-        }
-        QVector<ComplexList> cl = {
-            ComplexList::fromJson(array[0].toArray()),
-            ComplexList::fromJson(array[1].toArray()),
-            ComplexList::fromJson(array[2].toArray()),
-        };
+        auto const collection = collectionFromFile(fileName);
         // id from filename "00001.json"
         int const id = QFileInfo(fileName).baseName().toInt();
-        auto item = new ListItem(id, fileName, cl, QFileInfo(fileName).fileName(), ui->listWidgetLoad);
+        auto item = new ListItem(id, fileName, collection, QFileInfo(fileName).fileName(), ui->listWidgetLoad);
         item->setToolTip(fileName);
         item->setSelected(true);
     }
 }
 
-void setLabelMeanAndStdDev(QLabel *const label, NumList<double> const& anglesDeg, double const truth) {
-    label->setText(
-        QString("%1° ± %2° | %3°").arg(
-            QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2),
-            QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2),
-            QString::number(polar::rmse(anglesDeg, truth), 'f', 2)
-        )
-    );
-    label->setToolTip(
-        QString("%1\n%2\n%3").arg(
-            QString::number(polar::circularMeanDeg(anglesDeg), 'f', 2),
-            QString::number(polar::circularStdDevDeg(anglesDeg), 'f', 2),
-            QString::number(polar::rmse(anglesDeg, truth), 'f', 2)
-        )
-    );
-};
+Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& trueAngle, QPair<double, double> const& range) const {
+    Evaluation eval;
 
-void MainWindow::calc() {
-    if (not currentTabIsAnalyisTab()) {
-        return;
+    // General info
+    eval.N = batch.size();
+    eval.n = 0;
+    for (auto const& entry : batch) {
+        eval.n += entry.hasPong ? 1 : 0;
     }
 
-    QVector<QPair<QString, QVector<ComplexList>>> records;
-    for (QListWidget *const listWidget : { ui->listWidgetLoad, ui->listWidgetRecord }) {
-        for (QListWidgetItem *const qitem : listWidget->selectedItems()) {
-            ListItem *const item = dynamic_cast<ListItem *const>(qitem);
-            if (item == nullptr) {
-                continue;
-            }
-            records.append({item->name, item->data});
+    // Individual peaks
+    for (auto const& entry : batch) {
+        if (entry.hasPong) {
+            eval.musicSeparate.peaks << double(entry.music.peakAngle);
         }
     }
-    if (records.isEmpty()) {
-        return;
+    eval.musicSeparate.msr.mean = polar::circularMeanDeg(eval.musicSeparate.peaks);
+    eval.musicSeparate.msr.std  = polar::circularStdDevDeg(eval.musicSeparate.peaks);
+    eval.musicSeparate.msr.rmse = polar::rmse(eval.musicSeparate.peaks, trueAngle, &range);
+
+    eval.musicSeparate.minY = INFINITY;
+    eval.musicSeparate.maxY = -INFINITY;
+    for (auto const& entry : batch) {
+        eval.musicSeparate.minY = qMin(entry.music.min, eval.musicSeparate.minY);
+        eval.musicSeparate.maxY = qMax(entry.music.max, eval.musicSeparate.maxY);
     }
 
+    // Sum up all spectra
+    // Init sumspectrum with angles and 0
+    for (auto const& [angle, amp] : batch[0].music.spectrum) {
+        eval.musicSum.spectrum.append({angle, 0});
+    }
+    // Add all spectra (that have a pong)
+    for (auto const& entry : batch) {
+        // Ignore records without pong
+        if (not entry.hasPong) {
+            continue;
+        }
+        for (int i = 0; i < entry.music.spectrum.size(); ++i) {
+            eval.musicSum.spectrum[i].second += entry.music.spectrum[i].second;
+        }
+    }
+    // Sum Peak
+    eval.musicSum.maxY = -INFINITY;
+    eval.musicSum.minY = INFINITY;
+    for (auto const& [angle, amp]: eval.musicSum.spectrum) {
+        if (amp > eval.musicSum.maxY) {
+            eval.musicSum.maxY = amp;
+            eval.musicSum.peak = angle;
+        }
+        eval.musicSum.minY = qMin(eval.musicSum.minY, amp);
+    }
+
+    // PDOA
+    NumList<double> pdoa01;
+    NumList<double> pdoa12;
+    NumList<double> pdoa02;
+    NumList<double> pdoaMean;
+    for (auto const& entry : batch) {
+        if (entry.hasPong) {
+            pdoa01 << entry.pdoa.alpha01;
+            pdoa12 << entry.pdoa.alpha12;
+            pdoa02 << entry.pdoa.alpha02;
+            pdoaMean << entry.pdoa.alphaMean;
+        }
+    }
+    eval.pdoa.msr01.mean = polar::circularMeanDeg(pdoa01);
+    eval.pdoa.msr01.std  = polar::circularStdDevDeg(pdoa01);
+    eval.pdoa.msr01.rmse = polar::rmse(pdoa01, trueAngle, &range);
+    eval.pdoa.msr12.mean = polar::circularMeanDeg(pdoa12);
+    eval.pdoa.msr12.std  = polar::circularStdDevDeg(pdoa12);
+    eval.pdoa.msr12.rmse = polar::rmse(pdoa12, trueAngle, &range);
+    eval.pdoa.msr02.mean = polar::circularMeanDeg(pdoa02);
+    eval.pdoa.msr02.std  = polar::circularStdDevDeg(pdoa02);
+    eval.pdoa.msr02.rmse = polar::rmse(pdoa02, trueAngle, &range);
+    eval.pdoa.msr.mean = polar::circularMeanDeg(pdoaMean);
+    eval.pdoa.msr.std  = polar::circularStdDevDeg(pdoaMean);
+    eval.pdoa.msr.rmse = polar::rmse(pdoaMean, trueAngle, &range);
+
+    return eval;
+}
+
+QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QVector<ComplexList>>> const& records) const {
     SettingsDialog::Settings const settings = _settingsDialog->settings();
-
-    // Calc X Units (ms)
-    constexpr float resolution = 1.0f / 1000;
-    QList<float> X;
-    X.reserve(FRAME_SIZE);
-    for (int i = 0; i < FRAME_SIZE; ++i) {
-        X.append(i * resolution);
-    }
 
     // Calibration and Pong ranges
     int const caliCenter = settings.calibration.center;
@@ -437,7 +470,7 @@ void MainWindow::calc() {
             entry.music.peakAngle,
             entry.music.min,
             entry.music.max
-        );
+            );
 
         // Calculate PDOA angles
         double const caliPhase01 = gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
@@ -461,85 +494,71 @@ void MainWindow::calc() {
         batch << entry;
     }
     ui->progressBarChart->setValue(batch.size());
+    return batch;
+}
 
-    // Normalize (this did not end up beeing meaningful and has been removed)
-    // if (_checkBoxBatchChartNormalization->isChecked()) {
-    //     for (auto& entry : batch) {
-    //         normalizeSpectrum(entry.spectrum);
-    //     }
-    // }
+void setLabelMeanAndStdDev(QLabel *const label, evaluation::MeanStdRmse const& msr) {
+    label->setText(
+        QString("%1° ± %2° | %3°").arg(
+            QString::number(msr.mean, 'f', 2),
+            QString::number(msr.std , 'f', 2),
+            QString::number(msr.rmse, 'f', 2)
+        )
+    );
+};
 
-    float minYSeperate = INFINITY;
-    float maxYSeperate = -INFINITY;
-    for (auto const& entry : batch) {
-        minYSeperate = qMin(entry.music.min, minYSeperate);
-        maxYSeperate = qMax(entry.music.max, maxYSeperate);
+void MainWindow::calc() {
+    if (not currentTabIsAnalyisTab()) {
+        return;
     }
-
-    // Individual peaks
-    NumList<double> peaks;
-    for (auto const& entry : batch) {
-        if (entry.hasPong) {
-            peaks << double(entry.music.peakAngle);
+    // Items selected in the UI are the ones to be evaluated
+    QVector<QPair<QString, QVector<ComplexList>>> records;
+    for (QListWidget *const listWidget : { ui->listWidgetLoad, ui->listWidgetRecord }) {
+        for (QListWidgetItem *const qitem : listWidget->selectedItems()) {
+            ListItem *const item = dynamic_cast<ListItem *const>(qitem);
+            if (item == nullptr) {
+                continue;
+            }
+            records.append({item->name, item->data});
         }
     }
-
-    // Sum up all spectra
-    Spectrum sumSpectrum;
-    // Init sumspectrum with angles and 0
-    for (auto const& [angle, amp] : batch[0].music.spectrum) {
-        sumSpectrum.append({angle, 0});
-    }
-    // Add all spectra (that have a pong)
-    for (auto const& entry : batch) {
-        // Ignore records without pong
-        if (not entry.hasPong) {
-            continue;
-        }
-        for (int i = 0; i < entry.music.spectrum.size(); ++i) {
-            sumSpectrum[i].second += entry.music.spectrum[i].second;
-        }
+    if (records.isEmpty()) {
+        return;
     }
 
-    // Average PDOA angles
-    NumList<double> pdoa01;
-    NumList<double> pdoa12;
-    NumList<double> pdoa02;
-    NumList<double> pdoaMean;
-    for (auto const& entry : batch) {
-        if (entry.hasPong) {
-            pdoa01 << entry.pdoa.alpha01;
-            pdoa12 << entry.pdoa.alpha12;
-            pdoa02 << entry.pdoa.alpha02;
-            pdoaMean << entry.pdoa.alphaMean;
-        }
-    }
+    QVector<CacheEntry> const batch = loadCached(records);
 
-    // Set Info Panel
-    float maxYSum = -INFINITY;
-    float minYSum = INFINITY;
-    int sumPeak;
-    for (auto const& [angle, amp]: sumSpectrum) {
-        if (amp > maxYSum) {
-            maxYSum = amp;
-            sumPeak = angle;
-        }
-        minYSum = qMin(minYSum, amp);
-    }
-    QStringList names;
-    for (CacheEntry const& entry : batch) {
-        names << entry.name;
-    }
-    ui->labelEvalSamples ->setText(QString::number(peaks.size()) + " / " + QString::number(batch.size()));
-    ui->labelEvalSamples ->setToolTip(QString::number(peaks.size()));
-    ui->labelEvalSumPeak ->setText(QString::number(sumPeak) + "°");
-    ui->labelEvalSumPeak ->setToolTip(QString::number(sumPeak));
+    // Evaluate the batch
     int const truth = ui->doubleSpinBoxTrueAlpha->value();
-    setLabelMeanAndStdDev(ui->labelEvalSepPeak , peaks   , truth);
-    setLabelMeanAndStdDev(ui->labelEvalPdoa01  , pdoa01  , truth);
-    setLabelMeanAndStdDev(ui->labelEvalPdoa12  , pdoa12  , truth);
-    setLabelMeanAndStdDev(ui->labelEvalPdoa02  , pdoa02  , truth);
-    setLabelMeanAndStdDev(ui->labelEvalPdoaMean, pdoaMean, truth);
+    QPair<double, double> const range = _settingsDialog->settings().arrayType == AntennaArrayType::ULA ? QPair<double, double>(-90, 90) : QPair<double, double>(-180, 180);
+    Evaluation const eval = evaluate(batch, truth, range);
+
+    // Write evaluation to UI
+    ui->labelEvalSamples->setText(QString::number(eval.n) + " / " + QString::number(eval.N));
+    ui->labelEvalSumPeak->setText(QString::number(eval.musicSum.peak) + "°");
+    setLabelMeanAndStdDev(ui->labelEvalSepPeak , eval.musicSeparate.msr );
+    setLabelMeanAndStdDev(ui->labelEvalPdoa01  , eval.pdoa.msr01        );
+    setLabelMeanAndStdDev(ui->labelEvalPdoa12  , eval.pdoa.msr12        );
+    setLabelMeanAndStdDev(ui->labelEvalPdoa02  , eval.pdoa.msr02        );
+    setLabelMeanAndStdDev(ui->labelEvalPdoaMean, eval.pdoa.msr          );
+
+
+    // Calc X Units (ms)
+    constexpr float resolution = 1.0f / 1000;
+    QList<float> X;
+    X.reserve(FRAME_SIZE);
+    for (int i = 0; i < FRAME_SIZE; ++i) {
+        X.append(i * resolution);
+    }
+    // Calibration and Pong ranges
+    int const caliCenter = _settingsDialog->settings().calibration.center;
+    int const caliWidth  = _settingsDialog->settings().calibration.width;
+    int const pongCenter = _settingsDialog->settings().pong.center;
+    int const pongWidth  = _settingsDialog->settings().pong.width;
+    int const caliStart = qMax(0,          caliCenter - caliWidth);
+    int const caliEnd   = qMin(FRAME_SIZE, caliCenter + caliWidth);
+    int const pongStart = qMax(0,          pongCenter - pongWidth);
+    int const pongEnd   = qMin(FRAME_SIZE, pongCenter + pongWidth);
 
     // Plot Batch
     QChart *chart = nullptr;
@@ -559,8 +578,7 @@ void MainWindow::calc() {
             }
             // Peak
             if (entry.hasPong and ui->actionShow_MUSIC_Peaks->isChecked()) {
-                float const minY = /*_checkBoxBatchChartNormalization->isChecked() ? -1.0f : */minYSeperate;
-                QLineSeries *const peakLine = plot::box(chart, entry.music.peakAngle, entry.music.peakAngle, minY, 0.0f, QString::number(i), brush::green);
+                QLineSeries *const peakLine = plot::box(chart, entry.music.peakAngle, entry.music.peakAngle, float(eval.musicSeparate.minY), 0.0f, QString::number(i), brush::green);
                 connect(peakLine, &QLineSeries::clicked, this, [entry](){
                     qInfo() << "Peak" << entry.name;
                 });
@@ -571,19 +589,19 @@ void MainWindow::calc() {
             chart,
             "Winkel / °",
             "MUSIC Pseudo-Spektrum / dB"
-            );
+        );
         chart->legend()->hide();
     } else if (chartType == "MUSIC Cartesian Sum") {
         chart = new QChart();
-        plot::line(chart, sumSpectrum);
+        plot::line(chart, eval.musicSum.spectrum);
         if (ui->actionShow_MUSIC_Peaks->isChecked()) {
-            plot::box(chart, sumPeak, sumPeak, minYSum, maxYSum, "", brush::green);
+            plot::box(chart, eval.musicSum.peak, eval.musicSum.peak, eval.musicSum.minY, eval.musicSum.maxY, "", brush::green);
         }
         plot::makeAxes(
             chart,
             "Winkel / °",
             "MUSIC Pseudo-Spektrum / dB"
-            );
+        );
         chart->legend()->hide();
     } else if (chartType == "MUSIC Polar Seperate") {
         QPolarChart* polarChart = new QPolarChart();
@@ -621,8 +639,7 @@ void MainWindow::calc() {
             }
             // Peak
             if (entry.hasPong and ui->actionShow_MUSIC_Peaks->isChecked()) {
-                float const minY = /*_checkBoxBatchChartNormalization->isChecked() ? -1.0f : */minYSeperate;
-                QLineSeries *const peakLine = plot::box(polarChart, entry.music.peakAngle, entry.music.peakAngle, minY, 0.0f, QString::number(i), brush::green);
+                QLineSeries *const peakLine = plot::box(polarChart, entry.music.peakAngle, entry.music.peakAngle, float(eval.musicSeparate.minY), 0.0f, QString::number(i), brush::green);
                 connect(peakLine, &QLineSeries::clicked, this, [entry](){
                     qInfo() << "Peak" << entry.name;
                 });
@@ -908,7 +925,7 @@ void MainWindow::calc() {
             for (int y = 0; y < nAngles; ++y) {
                 float amp = entry.music.spectrum[y].second;
                 if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
-                    amp = minYSeperate;
+                    amp = eval.musicSeparate.minY;
                 }
                 col.append(amp);
             }
@@ -925,5 +942,75 @@ void MainWindow::calc() {
     }
     ui->chartWidget->chartView()->setTransform(transform);
     ui->chartWidget->chartView()->setChart(chart);
+}
+
+QVector<QStringList> transpose(QVector<QStringList> const& L) {
+    if (L.isEmpty() || L[0].isEmpty()) return {};
+
+    int rows = L.size();
+    int cols = L[0].size();
+
+    QVector<QStringList> result(cols, QStringList(rows, QString()));
+
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            result[j][i] = L[i][j];
+
+    return result;
+}
+
+void MainWindow::autoCalc() {
+    QString parentDir = QFileDialog::getExistingDirectory(nullptr, "Select Parent Directory");
+    if (parentDir.isEmpty()) {
+        return;
+    }
+    QStringList const subDirs = QDir(parentDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    ui->progressBarAuto->setMaximum(subDirs.size());
+    ui->progressBarAuto->setValue(0);
+
+    // Iterate through angles and perform evaluation
+    QVector<QPair<double, Evaluation>> evaluations;
+    int i = 0;
+    for (QString const& dir : subDirs) {
+        // dir = "-60"
+        ui->progressBarAuto->setValue(i++);
+        QVector<QPair<QString, QVector<ComplexList>>> records;
+        QStringList const files = QDir(parentDir + "/" + dir).entryList({"*.json"}, QDir::Files);
+        for (QString const& fileName : files) {
+            QString const filePath = parentDir + "/" + dir + "/" + fileName;
+            auto const collection = collectionFromFile(filePath);
+            records.append({filePath, collection});
+        }
+        auto const batch = loadCached(records);
+        double const trueAngle = dir.toDouble();
+        QPair<double, double> range;
+        if (parentDir.contains("ULA")) {
+            range = QPair<double, double>(-90, 90);
+        } else if (parentDir.contains("UCA")) {
+            range = QPair<double, double>(-180, 180);
+        } else {
+            QMessageBox::critical(this, "Error", "Der Verzeichnisname muss entweder \"ULA\" oder \"UCA\" enthalten, um den Arraytyp auszuweisen.\n\n" + parentDir);
+            return;
+        }
+        evaluations.append({dir.toDouble(), evaluate(batch, trueAngle, range)});
+    }
+    ui->progressBarAuto->setValue(i);
+    // sort by angle (-90, -60 .. 90)
+    std::sort(evaluations.begin(), evaluations.end(), [](auto const& a, auto const& b){
+        return a.first < b.first;
+    });
+    QStringList angleLables;
+    QVector<QStringList> evalData;
+    for (auto [angle, eval] : evaluations) {
+        angleLables.append(QString::number(angle));
+        evalData.append(eval.toColumn());
+    }
+    QStringList str;
+    for (QStringList const& row : transpose(evalData)) {
+        str << row.join("\t");
+    }
+    QString const tsv = str.join("\n");
+    QGuiApplication::clipboard()->setText(tsv);
+    QMessageBox::information(this, "AutoCalc", angleLables.join("\t") + "\n\n" + tsv);
 }
 

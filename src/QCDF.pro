@@ -10,6 +10,7 @@ CONFIG += optimize_full
 SOURCES += \
     collector.cpp \
     doubleslider.cpp \
+    evaluation.cpp \
     gr_doa.cpp \
     gr_music.cpp \
     main.cpp \
@@ -24,6 +25,7 @@ HEADERS += \
     collector.h \
     crc32.h \
     doubleslider.h \
+    evaluation.h \
     frame.h \
     gr_doa.h \
     gr_music.h \

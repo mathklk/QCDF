@@ -13,6 +13,7 @@
 
 #include "music.h"
 #include "gr_doa.h"
+#include "evaluation.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -20,9 +21,29 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+using evaluation::Evaluation;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+private:
+    struct CacheEntry {
+        QString name;
+        QVector<ComplexList> collection;
+        bool hasPong;
+        struct {
+            Spectrum spectrum;
+            int peakAngle;
+            double min;
+            double max;
+        } music;
+        struct {
+            double alpha01;
+            double alpha12;
+            double alpha02;
+            double alphaMean;
+        } pdoa;
+    };
 
 public:
     explicit MainWindow(Recorder *const, QVector<Node*> const&, Collector* const);
@@ -35,11 +56,16 @@ signals:
     void bytesToNode2(QByteArray);
     void bytesToNode3(QByteArray);
 
-private:
+private slots:
     void settingsChanged();
     bool currentTabIsAnalyisTab(void) const;
-    void loadFiles(QStringList const&);
+    QVector<ComplexList> collectionFromFile(QString const& filePath) const;
+    void putFilesIntoListWidget(QStringList const&);
+    Evaluation evaluate(QVector<CacheEntry> const&, double const&, QPair<double, double> const&) const;
+    QVector<CacheEntry> loadCached(QVector<QPair<QString, QVector<ComplexList>>> const&) const;
     void calc();
+
+    void autoCalc();
 
 private:
     class ListItem: public QListWidgetItem {
@@ -78,23 +104,6 @@ private:
     SettingsDialog* _settingsDialog;
     QComboBox* _comboBoxBatchChartType;
 
-    struct CacheEntry {
-        QString name;
-        QVector<ComplexList> collection;
-        bool hasPong;
-        struct {
-            Spectrum spectrum;
-            int peakAngle;
-            double min;
-            double max;
-        } music;
-        struct {
-            double alpha01;
-            double alpha12;
-            double alpha02;
-            double alphaMean;
-        } pdoa;
-    };
-    QMap<QString, CacheEntry> _cache;
+    mutable QMap<QString, CacheEntry> _cache;
 };
 #endif // MAINWINDOW_H
