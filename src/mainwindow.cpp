@@ -984,12 +984,12 @@ void MainWindow::autoCalc() {
         auto const batch = loadCached(records);
         double const trueAngle = dir.toDouble();
         QPair<double, double> range;
-        if (parentDir.contains("ULA")) {
+        if (_settingsDialog->settings().arrayType == AntennaArrayType::ULA) {
             range = QPair<double, double>(-90, 90);
-        } else if (parentDir.contains("UCA")) {
+        } else if (_settingsDialog->settings().arrayType == AntennaArrayType::UCA) {
             range = QPair<double, double>(-180, 180);
         } else {
-            QMessageBox::critical(this, "Error", "Der Verzeichnisname muss entweder \"ULA\" oder \"UCA\" enthalten, um den Arraytyp auszuweisen.\n\n" + parentDir);
+            QMessageBox::critical(this, "Error", QString("Array Type %1 not supported for autoCalc").arg(int(_settingsDialog->settings().arrayType)));
             return;
         }
         evaluations.append({dir.toDouble(), evaluate(batch, trueAngle, range)});

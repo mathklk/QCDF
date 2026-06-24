@@ -31,7 +31,7 @@ Spectrum music(
     if (array == AntennaArrayType::ULA) {
         pspectrum_len = 180 + 1;  // -90 to +90 inclusive
         angleOffset_deg = -90; // Center spectrum around broadside
-        music = new MusicLinArray(dLambda, 1, 3, pspectrum_len);
+        music = new MusicLinArray(dLambda, num_targets, num_ant, pspectrum_len);
     } else if (array == AntennaArrayType::UCA) {
         pspectrum_len = 360; // -180 to +180 inclusive (no +1 bc of wraparound)
         angleOffset_deg = 0;

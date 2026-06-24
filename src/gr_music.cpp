@@ -26,14 +26,30 @@
 
 #include "gr_music.h"
 
+#include <QDebug>
 #include <cmath>
+#include <QVector>
+
+// Make Eigen::VectorXf debuggable with QDebug
+QDebug& operator<<(QDebug& dbg, const Eigen::VectorXf& vec)
+{
+    dbg.nospace() << "[";
+    for (int i = 0; i < vec.size(); ++i) {
+        dbg.nospace() << vec[i];
+        if (i != vec.size() - 1) {
+            dbg.nospace() << ", ";
+        }
+    }
+    dbg.nospace() << "]";
+    return dbg.space();
+}
 
 MusicLinArray::MusicLinArray(
     float norm_spacing,
     int num_targets,
     int inputs,
     int pspectrum_len
-    ):
+):
     d_norm_spacing(norm_spacing),
     d_num_targets(num_targets),
     d_num_ant_ele(inputs),
@@ -46,9 +62,10 @@ MusicLinArray::MusicLinArray(
     {
         d_array_loc(nn) = d_norm_spacing*0.5*(2*nn-d_num_ant_ele+1);
     }
-
+    // qDebug() << "d_array_loc" << d_array_loc.transpose();
     // form theta vector
-    d_theta = new float[d_pspectrum_len];
+
+    QVector<float> d_theta(d_pspectrum_len);
     d_theta[0] = 0.0;
     float theta_prev = 0.0, theta;
     for (int ii = 1; ii < d_pspectrum_len; ii++)
@@ -57,6 +74,7 @@ MusicLinArray::MusicLinArray(
         theta_prev = theta;
         d_theta[ii] =EIGEN_PI*theta/180.0;
     }
+    // qDebug() << "d_theta" << d_theta;
     // form array response matrix
 
 
@@ -140,13 +158,17 @@ MusicTriangle::MusicTriangle(
     d_circumradius = d_norm_spacing / std::sqrt(3.0f);
 
     // Element angular positions around the triangle vertices in the xy-plane.
+    //     A
+    //    / \
+    //   C - B
     d_element_angles = Eigen::VectorXf(d_num_ant_ele);
     d_element_angles(0) = 0.0f;
     d_element_angles(1) = 2.0f * static_cast<float>(EIGEN_PI) / 3.0f;
     d_element_angles(2) = 4.0f * static_cast<float>(EIGEN_PI) / 3.0f;
+    // qDebug() << "d_element_angles" << d_element_angles;
 
     // Form theta (azimuth) vector covering [0, 360) degrees.
-    d_theta = new float[d_pspectrum_len];
+    QVector<float> d_theta(d_pspectrum_len);
     d_theta[0] = 0.0f;
     float theta_prev = 0.0f;
     for (int ii = 1; ii < d_pspectrum_len; ii++)
@@ -155,6 +177,7 @@ MusicTriangle::MusicTriangle(
         theta_prev = theta_deg;
         d_theta[ii] = static_cast<float>(EIGEN_PI) * theta_deg / 180.0f;
     }
+    // qDebug() << "d_theta" << d_theta;
 
     // Form array response matrix for the triangle.
     Eigen::VectorXcf vii_temp = Eigen::VectorXcf::Zero(d_num_ant_ele);

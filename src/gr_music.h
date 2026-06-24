@@ -50,7 +50,7 @@ private:
     int d_num_targets;
     int d_num_ant_ele;
     int d_pspectrum_len;
-    float *d_theta;
+    //float *d_theta;
     Eigen::VectorXf d_array_loc;
     Eigen::MatrixXcf d_vii_matrix;
     Eigen::MatrixXcf d_vii_matrix_trans;
@@ -73,7 +73,7 @@ private:
     int d_num_targets;
     int d_num_ant_ele;
     int d_pspectrum_len;
-    float *d_theta;
+    //float *d_theta;
     float d_circumradius;
     Eigen::VectorXf d_element_angles;
     Eigen::MatrixXcf d_vii_matrix;
