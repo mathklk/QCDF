@@ -252,7 +252,6 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::calc);
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxTrueAlpha, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
-    connect(ui->doubleSpinBoxMusicKernel, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
     connect(ui->pushButtonAuto, &QPushButton::clicked, this, &MainWindow::autoCalc);
 
     // Actions
@@ -395,6 +394,7 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
         }
         eval.musicSum.minY = qMin(eval.musicSum.minY, amp);
     }
+    eval.musicSum.quality = eval.musicSum.spectrum.atAngle(trueAngle) / eval.musicSum.minY;
 
     // PDOA
     NumList<double> pdoa01;
@@ -536,6 +536,8 @@ void MainWindow::calc() {
     // Write evaluation to UI
     ui->labelEvalSamples->setText(QString::number(eval.n) + " / " + QString::number(eval.N));
     ui->labelEvalSumPeak->setText(QString::number(eval.musicSum.peak) + "°");
+    ui->labelEvalSumQuality->setText(QString::number(eval.musicSum.quality));
+    ui->labelEvalSumQuality->setToolTip(QString::number(eval.musicSum.minY));
     setLabelMeanAndStdDev(ui->labelEvalSepPeak , eval.musicSeparate.msr );
     setLabelMeanAndStdDev(ui->labelEvalPdoa01  , eval.pdoa.msr01        );
     setLabelMeanAndStdDev(ui->labelEvalPdoa12  , eval.pdoa.msr12        );
@@ -965,6 +967,11 @@ void MainWindow::autoCalc() {
         return;
     }
     QStringList const subDirs = QDir(parentDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    if (subDirs.empty()) {
+        QMessageBox::critical(this, "No Subdirectories", QString("The selected parent directory does not contain any subdirectories\n\n%1").arg(parentDir));
+        return;
+    }
+
     ui->progressBarAuto->setMaximum(subDirs.size());
     ui->progressBarAuto->setValue(0);
 
@@ -972,7 +979,9 @@ void MainWindow::autoCalc() {
     QVector<QPair<double, Evaluation>> evaluations;
     int i = 0;
     for (QString const& dir : subDirs) {
-        // dir = "-60"
+        bool validName;
+        double const angle = dir.toDouble(&validName);
+        if (!validName) continue;
         ui->progressBarAuto->setValue(i++);
         QVector<QPair<QString, QVector<ComplexList>>> records;
         QStringList const files = QDir(parentDir + "/" + dir).entryList({"*.json"}, QDir::Files);
@@ -992,7 +1001,7 @@ void MainWindow::autoCalc() {
             QMessageBox::critical(this, "Error", "Der Verzeichnisname muss entweder \"ULA\" oder \"UCA\" enthalten, um den Arraytyp auszuweisen.\n\n" + parentDir);
             return;
         }
-        evaluations.append({dir.toDouble(), evaluate(batch, trueAngle, range)});
+        evaluations.append({angle, evaluate(batch, trueAngle, range)});
     }
     ui->progressBarAuto->setValue(i);
     // sort by angle (-90, -60 .. 90)
@@ -1001,7 +1010,7 @@ void MainWindow::autoCalc() {
     });
     QStringList angleLables;
     QVector<QStringList> evalData;
-    for (auto [angle, eval] : evaluations) {
+    for (auto const& [angle, eval] : evaluations) {
         angleLables.append(QString::number(angle));
         evalData.append(eval.toColumn());
     }
@@ -1011,6 +1020,14 @@ void MainWindow::autoCalc() {
     }
     QString const tsv = str.join("\n");
     QGuiApplication::clipboard()->setText(tsv);
-    QMessageBox::information(this, "AutoCalc", angleLables.join("\t") + "\n\n" + tsv);
+
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Information);
+    box.setWindowTitle("Result");
+    box.setText(angleLables.join("\t") + "\n\n" + tsv);
+    box.addButton("Copy", QMessageBox::ActionRole);
+    box.exec();
+    QGuiApplication::clipboard()->setText(tsv);
+    //QMessageBox::information(this, "AutoCalc", angleLables.join("\t") + "\n\n" + tsv);
 }
 

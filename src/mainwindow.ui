@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>534</width>
-    <height>538</height>
+    <height>571</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_Records">
        <attribute name="title">
@@ -374,7 +374,7 @@
               <string>MUSIC Summe</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_16">
-              <item row="1" column="1">
+              <item row="0" column="1">
                <widget class="QLabel" name="labelEvalSumPeak">
                 <property name="toolTip">
                  <string/>
@@ -384,39 +384,24 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
+              <item row="0" column="0">
                <widget class="QLabel" name="label_5">
                 <property name="text">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_6">
+              <item row="1" column="1">
+               <widget class="QLabel" name="labelEvalSumQuality">
                 <property name="text">
-                 <string>Kernel</string>
+                 <string/>
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBoxMusicKernel">
-                <property name="buttonSymbols">
-                 <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
-                </property>
-                <property name="specialValueText">
-                 <string>Ohne</string>
-                </property>
-                <property name="decimals">
-                 <number>0</number>
-                </property>
-                <property name="minimum">
-                 <double>0.000000000000000</double>
-                </property>
-                <property name="maximum">
-                 <double>9999999999.000000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.000000000000000</double>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Qualität&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -448,13 +433,6 @@
               <string>MUSIC Separat</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_15">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="1">
                <widget class="QLabel" name="labelEvalSepPeak">
                 <property name="toolTip">
@@ -462,6 +440,13 @@
                 </property>
                 <property name="text">
                  <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Peak&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -633,7 +618,7 @@
      <x>0</x>
      <y>0</y>
      <width>534</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSystem">
