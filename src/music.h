@@ -7,7 +7,10 @@
 #include "antenna_array_type.h"
 #include "frame.h"
 
-typedef QVector<QPair<int,float>> Spectrum;
+class Spectrum: public QVector<QPair<int,float>> {
+public:
+    float atAngle(int const&) const;
+};
 
 /**
  * @param array: Either "ULA" or "UCA"

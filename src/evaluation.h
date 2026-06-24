@@ -28,6 +28,7 @@ struct Evaluation {
     struct {
         Spectrum spectrum;
         int peak;
+        double quality;
         double minY;
         double maxY;
     } musicSum;

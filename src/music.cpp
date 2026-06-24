@@ -3,6 +3,16 @@
 #include "gr_doa.h"
 #include "gr_music.h"
 
+
+float Spectrum::atAngle(int const& alpha) const {
+    for (auto const& [beta, amplitude] : *this) {
+        if (alpha == beta) {
+            return amplitude;
+        }
+    }
+    return NAN;
+}
+
 Spectrum music(
     AntennaArrayType const array,
     float const dLambda,
