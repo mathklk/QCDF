@@ -17,6 +17,9 @@ QStringList evaluation::Evaluation::toColumn() const {
         // PDOA
         QString::number(pdoa.msr.mean, 'f', 2),
         QString::number(pdoa.msr.std, 'f', 2),
-        QString::number(pdoa.msr.rmse, 'f', 2)
+        QString::number(pdoa.msr.rmse, 'f', 2),
+        QString::number(pdoa.msr02.mean, 'f', 2),
+        QString::number(pdoa.msr02.std, 'f', 2),
+        QString::number(pdoa.msr02.rmse, 'f', 2)
     };
 }
