@@ -89,6 +89,7 @@ private:
 
 private:
     Ui::MainWindow *ui;
+    QString const _windowTitle = "QCDF";
 
     Recorder* _recorder;
     QVector<Node*> _nodes;

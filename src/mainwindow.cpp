@@ -33,7 +33,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     _collector(collector)
 {
     ui->setupUi(this);
-    setWindowTitle("QCDF");
+    setWindowTitle(_windowTitle);
 
     for (Node *const node : nodes) {
         connect(this, &MainWindow::reconnectNodes, node, &Node::reconnect);
@@ -209,6 +209,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         QStringList const files = QFileDialog::getOpenFileNames(nullptr, "Select recordings to load");
         if (not files.isEmpty()) {
             putFilesIntoListWidget(files);
+            setWindowTitle(_windowTitle);
         }
     });
     connect(ui->pushButtonLoadDir, &QPushButton::clicked, this, [this]{
@@ -219,17 +220,19 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         // List all json files in directory
         QStringList const files = QDir(directory).entryList({"*.json"}, QDir::Files);
         if (files.isEmpty()) {
-            QMessageBox::warning(this, "Directory is empty", "Directory '" + directory + "' is empty.");
+            QMessageBox::warning(this, "Directory is empty", "Directory '" + directory + "' contains no JSON files.");
         } else {
             QStringList absoluteFiles;
             for (QString const& file : files) {
                 absoluteFiles << QDir(directory).absoluteFilePath(file);
             }
             putFilesIntoListWidget(absoluteFiles);
+            setWindowTitle(_windowTitle + " " + directory);
         }
     });
     connect(ui->pushButtonClearLoad, &QPushButton::clicked, this, [this](){
         ui->listWidgetLoad->clear();
+        setWindowTitle(_windowTitle);
     });
 
     // Calculation
@@ -395,7 +398,7 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
         eval.musicSum.minY = qMin(eval.musicSum.minY, amp);
     }
     eval.musicSum.quality = eval.musicSum.spectrum.atAngle(trueAngle) / eval.musicSum.minY;
-
+    
     // PDOA
     NumList<double> pdoa01;
     NumList<double> pdoa12;
@@ -1023,7 +1026,7 @@ void MainWindow::autoCalc() {
 
     QMessageBox box(this);
     box.setIcon(QMessageBox::Information);
-    box.setWindowTitle("Result");
+    box.setWindowTitle("Result - " +parentDir);
     box.setText(angleLables.join("\t") + "\n\n" + tsv);
     box.addButton("Copy", QMessageBox::ActionRole);
     box.exec();
