@@ -60,25 +60,26 @@ double circularStdDevDeg(QList<T> const& angles) {
 }
 
 // Root Mean Square Error
+
+template <typename T>
+static T wrap(T error, QPair<T,T> const*const range = nullptr) {
+    if (range == nullptr) {
+        return error;
+    }
+    T const lo = range->first;
+    T const hi = range->second;
+    T const r  = hi - lo;
+
+    error = std::fmod(error - lo, r);
+    if (error < 0) error += r;
+    return error + lo;
+}
+
 template <typename T>
 double rmse(QList<T> const& samples, T const& truth, QPair<T,T> const*const wrapRange = nullptr) {
-
-    auto wrapError = [&](T error) -> T {
-        if (wrapRange == nullptr) {
-            return error;
-        }
-        const T lo    = wrapRange->first;
-        const T hi    = wrapRange->second;
-        const T range = hi - lo;
-
-        error = std::fmod(error - lo, range);
-        if (error < 0) error += range;
-        return error + lo;
-    };
-
     NumList<T> squaredErrors;
     for (const auto& sample : samples) {
-        T wrappedError = wrapError(sample - truth);
+        T const wrappedError = wrap(sample - truth, wrapRange);
         squaredErrors << wrappedError * wrappedError;
     }
     return std::sqrt(squaredErrors.mean());
