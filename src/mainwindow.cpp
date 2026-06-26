@@ -3,6 +3,7 @@
 
 #include "plot.h"
 #include "polar.h"
+#include "ivector.h"
 
 #include <QFontDatabase>
 #include <QFileDialog>
@@ -425,6 +426,31 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
     eval.pdoa.msr.std  = polar::circularStdDevDeg(pdoaMean);
     eval.pdoa.msr.rmse = polar::rmse(pdoaMean, trueAngle, &range);
 
+    NumList<double> cali01, cali02, pong01, pong02, pong12, alpha01, alpha12, alpha02;
+    for (auto const& entry : batch) {
+        if (entry.hasPong) {
+            cali01 << entry.pdoa.cali01;
+            cali02 << entry.pdoa.cali02;
+            pong01 << entry.pdoa.pong01;
+            pong02 << entry.pdoa.pong02;
+            pong12 << entry.pdoa.pong12;
+            alpha01 << entry.pdoa.alpha01;
+            alpha12 << entry.pdoa.alpha12;
+            alpha02 << entry.pdoa.alpha02;
+        }
+    }
+
+    qDebug()
+        << "Cali01"  << cali01.mean()  << '\t' << cali01.stdDev()  << "\n"
+        << "Cali02"  << cali02.mean()  << '\t' << cali02.stdDev()  << "\n"
+        << "Pong01"  << pong01.mean()  << '\t' << pong01.stdDev()  << "\n"
+        << "Pong12"  << pong12.mean()  << '\t' << pong12.stdDev()  << "\n"
+        << "Pong02"  << pong02.mean()  << '\t' << pong02.stdDev()  << "\n"
+        << "Alpha01" << alpha01.mean() << '\t' << alpha01.stdDev() << "\n"
+        << "Alpha12" << alpha12.mean() << '\t' << alpha12.stdDev() << "\n"
+        << "Alpha02" << alpha02.mean() << '\t' << alpha02.stdDev() << "\n"
+    ;
+
     return eval;
 }
 
@@ -473,20 +499,20 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
             entry.music.peakAngle,
             entry.music.min,
             entry.music.max
-            );
+        );
 
         // Calculate PDOA angles
-        double const caliPhase01 = gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
-        double const caliPhase02 = gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
+        entry.pdoa.cali01 = gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
+        entry.pdoa.cali02 = gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
 
-        double const pongPhase01 = gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd);
-        double const pongPhase12 = gr_doa::phaseDifference(collection[1], collection[2], pongStart, pongEnd);
-        double const pongPhase02 = gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd);
+        entry.pdoa.pong01 = gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd);
+        entry.pdoa.pong12 = gr_doa::phaseDifference(collection[1], collection[2], pongStart, pongEnd);
+        entry.pdoa.pong02 = gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd);
 
         double const lambda_m = settings.lambda_m();
-        entry.pdoa.alpha01 = gr_doa::angle(polar::wrapPi(pongPhase01 - caliPhase01                ), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha12 = gr_doa::angle(polar::wrapPi(pongPhase12 - (caliPhase02 - caliPhase01)), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha02 = gr_doa::angle(polar::wrapPi(pongPhase02 - caliPhase02                ), lambda_m, settings.antennaSpacing * lambda_m * 2);
+        entry.pdoa.alpha01 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong01 - entry.pdoa.cali01                      ), lambda_m, settings.antennaSpacing * lambda_m    );
+        entry.pdoa.alpha12 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong12 - (entry.pdoa.cali02 - entry.pdoa.cali01)), lambda_m, settings.antennaSpacing * lambda_m    );
+        entry.pdoa.alpha02 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong02 - entry.pdoa.cali02                      ), lambda_m, settings.antennaSpacing * lambda_m * 2);
         entry.pdoa.alphaMean = polar::circularMeanDeg(QList<double>{entry.pdoa.alpha01, entry.pdoa.alpha12, entry.pdoa.alpha02});
         // Correct for different baseline orientations of UCA array
         //     0=A
@@ -532,7 +558,7 @@ void MainWindow::calc() {
         return;
     }
 
-    QVector<CacheEntry> const batch = loadCached(records);
+    IVector<CacheEntry> const batch = loadCached(records);
 
     // Evaluate the batch
     int const truth = ui->doubleSpinBoxTrueAlpha->value();
@@ -568,6 +594,9 @@ void MainWindow::calc() {
     int const pongStart = qMax(0,          pongCenter - pongWidth);
     int const pongEnd   = qMin(FRAME_SIZE, pongCenter + pongWidth);
 
+    double const lim    = _settingsDialog->settings().arrayType == AntennaArrayType::ULA ? 90.0 : 180.0;
+    bool const pongOnly = ui->actionShow_Pong_Only->isChecked();
+
     // Plot Batch
     QChart *chart = nullptr;
     QTransform transform;
@@ -577,7 +606,7 @@ void MainWindow::calc() {
         for (int i = 0; i < batch.size(); ++i) {
             // Spectrum
             auto const entry = batch[i];
-            if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+            if (entry.hasPong or not pongOnly) {
                 QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
                 QLineSeries *const series = plot::line(chart, entry.music.spectrum, "", brush);
                 connect(series, &QLineSeries::clicked, this, [entry](){
@@ -623,7 +652,7 @@ void MainWindow::calc() {
         for (int i = 0; i < batch.size(); ++i) {
             // Spectrum
             auto const entry = batch[i];
-            if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+            if (entry.hasPong or not pongOnly) {
                 QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
                 QVector<QPair<int,float>> spectrum = entry.music.spectrum;
                 /*
@@ -741,7 +770,7 @@ void MainWindow::calc() {
         QVector<QAbstractSeries*> serieses;
         for (int i = 0; i < batch.size(); ++i) {
             auto const entry = batch[i];
-            if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+            if (entry.hasPong or not pongOnly) {
                 QLineSeries *const line01 = plot::box(polarChart, entry.pdoa.alpha01, entry.pdoa.alpha01, 0, 1, entry.name, entry.hasPong ? brush::orange  : brush::red);
                 QLineSeries *const line12 = plot::box(polarChart, entry.pdoa.alpha12, entry.pdoa.alpha12, 0, 1, entry.name, entry.hasPong ? brush::magenta : brush::red);
                 QLineSeries *const line02 = plot::box(polarChart, entry.pdoa.alpha02, entry.pdoa.alpha02, 0, 1, entry.name, entry.hasPong ? brush::blue    : brush::red);
@@ -780,7 +809,7 @@ void MainWindow::calc() {
             //plot::line<float,float>(chart, X, batch[0].collection[2].abs(), "Modul 2");
         } else {
             for (auto const& entry : batch) {
-                if (entry.hasPong or not ui->actionShow_Pong_Only->isChecked()) {
+                if (entry.hasPong or not pongOnly) {
                     QBrush const& brush = entry.hasPong ? brush::blue : brush::red;
                     for (auto const& complexList : entry.collection) {
                         NumList const Y = ui->actionLog_Amplitude->isChecked() ? complexList.abs().ln() : complexList.abs();
@@ -809,7 +838,7 @@ void MainWindow::calc() {
         int i = -1;
         for (auto const& entry : batch) {
             ui->progressBarChart->setValue(++i);
-            if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
+            if (pongOnly and not entry.hasPong) {
                 continue;
             }
             auto const& collection = entry.collection;
@@ -849,30 +878,30 @@ void MainWindow::calc() {
         plot::box(chart, -max, max, -max, max, "", brush::gray);
         plot::makeAxes(chart, "real", "imag");
     } else if (chartType == "Reference Phases") {
-        chart = new QChart();
-        QList<float> referencePhases01;
-        QList<float> referencePhases02;
-        QList<float> calibratedPhases01;
-        QList<float> calibratedPhases02;
+        chart = new QChart();      
+        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali01; }), "Cali01");
+        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali02; }), "Cali02");
+        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong01; }), "Pong01");
+        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong12; }), "Pong12");
+        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong02; }), "Pong02");
+        NumList<double> calibrated01, calibrated02;
         for (auto const& entry : batch) {
-            if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
-                continue;
+            if (pongOnly and not entry.hasPong) {
+                calibrated01 << NAN;
+                calibrated02 << NAN;
+            } else {
+                calibrated01 << polar::wrapPi(entry.pdoa.pong01 - entry.pdoa.cali01);
+                calibrated02 << polar::wrapPi(entry.pdoa.pong02 - entry.pdoa.cali02);
             }
-            auto const& collection = entry.collection;
-            referencePhases01 << gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
-            referencePhases02 << gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
-            calibratedPhases01 << polar::wrapPi(gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd) - referencePhases01.last());
-            calibratedPhases02 << polar::wrapPi(gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd) - referencePhases02.last());
         }
-        plot::scatter(chart, referencePhases01,  "Reference 0-1");
-        plot::scatter(chart, referencePhases02,  "Reference 0-2");
-        plot::scatter(chart, calibratedPhases01, "Calibrated Pong 0-1");
-        plot::scatter(chart, calibratedPhases02, "Calibrated Pong 0-2");
+        plot::line(chart, calibrated01, "Calibrated01");
+        plot::line(chart, calibrated02, "Calibrated02");
+        plot::box(chart, 0ll, batch.size(), -M_PI, M_PI, "", brush::gray);
         plot::makeAxes(
             chart,
             "Peilung #",
             "Phasendifferenz / rad"
-            );
+        );
     } else if (chartType == "MUSIC Peaks over time") {
         chart = new QChart();
         QList<float> pong;
@@ -888,7 +917,7 @@ void MainWindow::calc() {
         }
         plot::scatter(chart, pong, "", brush::blue);
         plot::scatter(chart, noPong, "", brush::red);
-        plot::box(chart, 0ll, batch.size(), -90.0f, 90.0f, "", brush::gray);
+        plot::box(chart, 0ll, batch.size(), -lim, lim, "", brush::gray);
         chart->legend()->hide();
         plot::makeAxes(
             chart,
@@ -897,26 +926,15 @@ void MainWindow::calc() {
         );
     } else if (chartType == "PDOA over time") {
         chart = new QChart();
-        QList<float> pong;
-        QList<float> noPong;
-        for (auto const& entry : batch) {
-            if (entry.hasPong) {
-                pong << entry.music.peakAngle;
-                noPong << NAN;
-            } else {
-                noPong << entry.music.peakAngle;
-                pong << NAN;
-            }
-        }
-        plot::scatter(chart, pong, "", brush::blue);
-        plot::scatter(chart, noPong, "", brush::red);
-        plot::box(chart, 0ll, batch.size(), -90.0f, 90.0f, "", brush::gray);
-        chart->legend()->hide();
+        plot::line(chart, batch.map<double>([=](CacheEntry const& e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.alpha01; }), "Alpha01");
+        plot::line(chart, batch.map<double>([=](CacheEntry const& e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.alpha12; }), "Alpha12");
+        plot::line(chart, batch.map<double>([=](CacheEntry const& e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.alpha02; }), "Alpha02");
+        plot::box(chart, 0ll, batch.size(), -lim, lim, "", brush::gray);
         plot::makeAxes(
             chart,
             "Peilung #",
             "Winkel / °"
-            );
+        );
     } else if (chartType == "MUSIC Spectrogram") {
         chart = new QChart();
         int const nEntries = batch.size();
@@ -932,7 +950,7 @@ void MainWindow::calc() {
             col.reserve(nAngles);
             for (int y = 0; y < nAngles; ++y) {
                 float amp = entry.music.spectrum[y].second;
-                if (ui->actionShow_Pong_Only->isChecked() and not entry.hasPong) {
+                if (pongOnly and not entry.hasPong) {
                     amp = eval.musicSeparate.minY;
                 }
                 col.append(amp);

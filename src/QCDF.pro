@@ -34,6 +34,7 @@ HEADERS += \
     music.h \
     node.h \
     numlist.h \
+    ivector.h \
     physics.h \
     plot.h \
     polar.h \

@@ -38,6 +38,11 @@ private:
             double max;
         } music;
         struct {
+            double cali01;
+            double cali02;
+            double pong01;
+            double pong12;
+            double pong02;
             double alpha01;
             double alpha12;
             double alpha02;

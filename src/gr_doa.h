@@ -34,7 +34,7 @@ Positive Phasendifferenz -> Positives α -> Signal kommt von rechts
 Negative Phasendifferenz -> Negatives α -> Signal kommt von links
 
                Δφ * λ
-  α = asin( ----------- )
+ α = sin^-1( ----------- )
              2 * π * d
  */
 double angle(double const dp, double const lambda, double const d);

@@ -50,7 +50,7 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         }
     } else {
         qWarning() << "COM.txt file not found in directory" << QDir::currentPath();
-        show();
+        //show();
     }
 
     ui->caliSliders->setRange(0, 7000);
