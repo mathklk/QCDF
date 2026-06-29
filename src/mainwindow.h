@@ -43,6 +43,9 @@ private:
             double pong01;
             double pong12;
             double pong02;
+            double phase01;
+            double phase12;
+            double phase02;
             double alpha01;
             double alpha12;
             double alpha02;

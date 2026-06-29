@@ -346,6 +346,11 @@ void MainWindow::putFilesIntoListWidget(QStringList const& files) {
     }
 }
 
+/**
+ * evaluate(), calc(), loadCached() and autoCalc() should MOST DEFINITELY not be in this GUI class, let alone
+ * even run in the GUI thread. It freezes the UI for a solid few seconds every time they run.
+ * However, this makes testing and interfacing with the UI easier and I dont have time to refactor it right now.
+ */
 Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& trueAngle, QPair<double, double> const& range) const {
     Evaluation eval;
 
@@ -509,18 +514,39 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         entry.pdoa.pong12 = gr_doa::phaseDifference(collection[1], collection[2], pongStart, pongEnd);
         entry.pdoa.pong02 = gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd);
 
+        /* Angle calculation from phase difference for ULA and UCA
+         *
+         * The ULA angles already match the desired reference ( "v" indicates zero bearing)
+         * For UCA, we have to correct for different baseline orientations (+-60 degrees for sides)
+         *
+         * ULA:
+         *
+         *     v
+         * 0 - 1 - 2
+         *
+         * UCA:
+         *
+         *    v
+         *    0
+         *   / \
+         *  2 - 1
+         */
+
+        entry.pdoa.phase01 = polar::wrapPi(entry.pdoa.pong01 -  entry.pdoa.cali01                     );
+        entry.pdoa.phase12 = polar::wrapPi(entry.pdoa.pong12 - (entry.pdoa.cali02 - entry.pdoa.cali01));
+        entry.pdoa.phase02 = polar::wrapPi(entry.pdoa.pong02 -  entry.pdoa.cali02                     );
+
         double const lambda_m = settings.lambda_m();
-        entry.pdoa.alpha01 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong01 - entry.pdoa.cali01                      ), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha12 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong12 - (entry.pdoa.cali02 - entry.pdoa.cali01)), lambda_m, settings.antennaSpacing * lambda_m    );
-        entry.pdoa.alpha02 = gr_doa::angle(polar::wrapPi(entry.pdoa.pong02 - entry.pdoa.cali02                      ), lambda_m, settings.antennaSpacing * lambda_m * 2);
+        int const spacing02 = (settings.arrayType == AntennaArrayType::ULA) ? 2 : 1;
+        entry.pdoa.alpha01 = gr_doa::angle(entry.pdoa.phase01, lambda_m, settings.antennaSpacing * lambda_m            );
+        entry.pdoa.alpha12 = gr_doa::angle(entry.pdoa.phase12, lambda_m, settings.antennaSpacing * lambda_m            );
+        entry.pdoa.alpha02 = gr_doa::angle(entry.pdoa.phase02, lambda_m, settings.antennaSpacing * lambda_m * spacing02);
         entry.pdoa.alphaMean = polar::circularMeanDeg(QList<double>{entry.pdoa.alpha01, entry.pdoa.alpha12, entry.pdoa.alpha02});
-        // Correct for different baseline orientations of UCA array
-        //     0=A
-        //    /   \
-        //  2=C - 1=B
+
         if (settings.arrayType == AntennaArrayType::UCA) {
-            entry.pdoa.alpha01 = polar::wrap180(entry.pdoa.alpha01 + 60);
-            entry.pdoa.alpha02 = polar::wrap180(entry.pdoa.alpha02 - 60);
+            entry.pdoa.alpha01 = polar::wrap180(entry.pdoa.alpha01 + 60 );
+            entry.pdoa.alpha02 = polar::wrap180(entry.pdoa.alpha02 - 60 );
+            entry.pdoa.alpha12 = polar::wrap180(entry.pdoa.alpha12 + 180);
         }
         _cache[cacheKey] = entry;
         batch << entry;
