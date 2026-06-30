@@ -12,6 +12,17 @@
 
 namespace polar {
 
+double wrapPi(double x) {
+    while (x <= -M_PI) x += 2*M_PI;
+    while (x >   M_PI) x -= 2*M_PI;
+    return x;
+}
+double wrap180(double x) {
+    while (x <= -180) x += 2*180;
+    while (x >   180) x -= 2*180;
+    return x;
+}
+
 /* The circular mean, median and stdDev definitons are taken from
  * "Directional Statistics" 1999 by Mardia and Jupp pages 15ff
  * (The same defintions youll find on wikipedia and in many libraries)
@@ -132,7 +143,7 @@ double circularMedianDeg(QList<T> const& angles) {
         }
     }
 
-    return bestAngle;
+    return polar::wrap180(bestAngle);
 }
 
 // Amplitude einer komplexen Zahl logarithmieren
@@ -144,17 +155,6 @@ std::complex<float> cLn(std::complex<float> const& z) {
     }
     float const scale = qLn(A) / A;  // Skalierungsfaktor (reell)
     return z * scale;
-}
-
-double wrapPi(double x) {
-    while (x <= -M_PI) x += 2*M_PI;
-    while (x >   M_PI) x -= 2*M_PI;
-    return x;
-}
-double wrap180(double x) {
-    while (x <= -180) x += 2*180;
-    while (x >   180) x -= 2*180;
-    return x;
 }
 
 }; // namespace polar
