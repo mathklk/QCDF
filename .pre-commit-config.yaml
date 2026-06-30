@@ -1,0 +1,7 @@
+repos:
+  - repo: https://github.com/ayasyrev/nbmetaclean
+    rev: 0.1.4
+    hooks:
+    - id: nbmetaclean
+    - id: nbcheck
+      args: [ --ec, --err, --warn, '--no_exec' ]
