@@ -1068,7 +1068,7 @@ void MainWindow::autoCalc() {
 
     QMessageBox box(this);
     box.setIcon(QMessageBox::Information);
-    box.setWindowTitle("Result - " +parentDir);
+    box.setWindowTitle("Result - " + parentDir.split("/").last());
     box.setText(angleLables.join("\t") + "\n\n" + tsv);
     box.addButton("Copy", QMessageBox::ActionRole);
     box.exec();
