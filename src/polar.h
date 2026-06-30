@@ -12,7 +12,7 @@
 
 namespace polar {
 
-/* The circularMean and circularStdDev definitons are taken from
+/* The circular mean, median and stdDev definitons are taken from
  * "Directional Statistics" 1999 by Mardia and Jupp pages 15ff
  * (The same defintions youll find on wikipedia and in many libraries)
  */
@@ -83,6 +83,56 @@ double rmse(QList<T> const& samples, T const& truth, QPair<T,T> const*const wrap
         squaredErrors << wrappedError * wrappedError;
     }
     return std::sqrt(squaredErrors.mean());
+}
+
+// Median
+
+template <typename T>
+double circularDistanceDeg(double a, double b) {
+    double d = std::fmod(std::abs(a - b), 360.0);
+    return (d > 180.0) ? (360.0 - d) : d;
+}
+
+inline double normalizeAngleDeg(double angle) {
+    double x = std::fmod(angle, 360.0);
+    if (x < 0.0) {
+        x += 360.0;
+    }
+    return x;
+}
+
+template <typename T>
+double circularMedianDeg(QList<T> const& angles) {
+    if (angles.empty()) {
+        return NAN;
+    }
+
+    QList<double> normalized;
+    normalized.reserve(angles.size());
+
+    for (double angle : angles) {
+        normalized.append(normalizeAngleDeg(angle));
+    }
+
+    std::sort(normalized.begin(), normalized.end());
+
+    double bestAngle = normalized.first();
+    double bestCost = std::numeric_limits<double>::infinity();
+
+    for (double candidate : normalized) {
+        double cost = 0.0;
+
+        for (double angle : normalized) {
+            cost += circularDistanceDeg<double>(candidate, angle);
+        }
+
+        if (cost < bestCost) {
+            bestCost = cost;
+            bestAngle = candidate;
+        }
+    }
+
+    return bestAngle;
 }
 
 // Amplitude einer komplexen Zahl logarithmieren

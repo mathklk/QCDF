@@ -8,8 +8,9 @@
 
 namespace evaluation {
 
-struct MeanStdRmse {
+struct MeanMedianStdRmse {
     double mean;
+    double median;
     double std;
     double rmse;
 };
@@ -20,7 +21,7 @@ struct Evaluation {
 
     struct {
         NumList<double> peaks;
-        MeanStdRmse msr;
+        MeanMedianStdRmse msr;
         double minY;
         double maxY;
     } musicSeparate;
@@ -34,10 +35,10 @@ struct Evaluation {
     } musicSum;
 
     struct {
-        MeanStdRmse msr01;
-        MeanStdRmse msr12;
-        MeanStdRmse msr02;
-        MeanStdRmse msr;
+        MeanMedianStdRmse msr01;
+        MeanMedianStdRmse msr12;
+        MeanMedianStdRmse msr02;
+        MeanMedianStdRmse msr;
     } pdoa;
 
 public:

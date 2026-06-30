@@ -367,9 +367,10 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
             eval.musicSeparate.peaks << double(entry.music.peakAngle);
         }
     }
-    eval.musicSeparate.msr.mean = polar::circularMeanDeg(eval.musicSeparate.peaks);
-    eval.musicSeparate.msr.std  = polar::circularStdDevDeg(eval.musicSeparate.peaks);
-    eval.musicSeparate.msr.rmse = polar::rmse(eval.musicSeparate.peaks, trueAngle, &range);
+    eval.musicSeparate.msr.mean   = polar::circularMeanDeg(eval.musicSeparate.peaks);
+    eval.musicSeparate.msr.median = polar::circularMedianDeg(eval.musicSeparate.peaks);
+    eval.musicSeparate.msr.std    = polar::circularStdDevDeg(eval.musicSeparate.peaks);
+    eval.musicSeparate.msr.rmse   = polar::rmse(eval.musicSeparate.peaks, trueAngle, &range);
 
     eval.musicSeparate.minY = INFINITY;
     eval.musicSeparate.maxY = -INFINITY;
@@ -418,18 +419,22 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
             pdoaMean << entry.pdoa.alphaMean;
         }
     }
-    eval.pdoa.msr01.mean = polar::circularMeanDeg(pdoa01);
-    eval.pdoa.msr01.std  = polar::circularStdDevDeg(pdoa01);
-    eval.pdoa.msr01.rmse = polar::rmse(pdoa01, trueAngle, &range);
-    eval.pdoa.msr12.mean = polar::circularMeanDeg(pdoa12);
-    eval.pdoa.msr12.std  = polar::circularStdDevDeg(pdoa12);
-    eval.pdoa.msr12.rmse = polar::rmse(pdoa12, trueAngle, &range);
-    eval.pdoa.msr02.mean = polar::circularMeanDeg(pdoa02);
-    eval.pdoa.msr02.std  = polar::circularStdDevDeg(pdoa02);
-    eval.pdoa.msr02.rmse = polar::rmse(pdoa02, trueAngle, &range);
-    eval.pdoa.msr.mean = polar::circularMeanDeg(pdoaMean);
-    eval.pdoa.msr.std  = polar::circularStdDevDeg(pdoaMean);
-    eval.pdoa.msr.rmse = polar::rmse(pdoaMean, trueAngle, &range);
+    eval.pdoa.msr01.mean   = polar::circularMeanDeg(pdoa01);
+    eval.pdoa.msr01.median = polar::circularMedianDeg(pdoa01);
+    eval.pdoa.msr01.std    = polar::circularStdDevDeg(pdoa01);
+    eval.pdoa.msr01.rmse   = polar::rmse(pdoa01, trueAngle, &range);
+    eval.pdoa.msr12.mean   = polar::circularMeanDeg(pdoa12);
+    eval.pdoa.msr12.median = polar::circularMedianDeg(pdoa12);
+    eval.pdoa.msr12.std    = polar::circularStdDevDeg(pdoa12);
+    eval.pdoa.msr12.rmse   = polar::rmse(pdoa12, trueAngle, &range);
+    eval.pdoa.msr02.mean   = polar::circularMeanDeg(pdoa02);
+    eval.pdoa.msr02.median = polar::circularMedianDeg(pdoa02);
+    eval.pdoa.msr02.std    = polar::circularStdDevDeg(pdoa02);
+    eval.pdoa.msr02.rmse   = polar::rmse(pdoa02, trueAngle, &range);
+    eval.pdoa.msr.mean     = polar::circularMeanDeg(pdoaMean);
+    eval.pdoa.msr.median   = polar::circularMedianDeg(pdoaMean);
+    eval.pdoa.msr.std      = polar::circularStdDevDeg(pdoaMean);
+    eval.pdoa.msr.rmse     = polar::rmse(pdoaMean, trueAngle, &range);
 
     NumList<double> cali01, cali02, pong01, pong02, pong12, alpha01, alpha12, alpha02;
     for (auto const& entry : batch) {
@@ -444,17 +449,6 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
             alpha02 << entry.pdoa.alpha02;
         }
     }
-
-    qDebug()
-        << "Cali01"  << cali01.mean()  << '\t' << cali01.stdDev()  << "\n"
-        << "Cali02"  << cali02.mean()  << '\t' << cali02.stdDev()  << "\n"
-        << "Pong01"  << pong01.mean()  << '\t' << pong01.stdDev()  << "\n"
-        << "Pong12"  << pong12.mean()  << '\t' << pong12.stdDev()  << "\n"
-        << "Pong02"  << pong02.mean()  << '\t' << pong02.stdDev()  << "\n"
-        << "Alpha01" << alpha01.mean() << '\t' << alpha01.stdDev() << "\n"
-        << "Alpha12" << alpha12.mean() << '\t' << alpha12.stdDev() << "\n"
-        << "Alpha02" << alpha02.mean() << '\t' << alpha02.stdDev() << "\n"
-    ;
 
     return eval;
 }
@@ -555,12 +549,13 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
     return batch;
 }
 
-void setLabelMeanAndStdDev(QLabel *const label, evaluation::MeanStdRmse const& msr) {
+void setLabelMeanAndStdDev(QLabel *const label, evaluation::MeanMedianStdRmse const& msr) {
     label->setText(
-        QString("%1° ± %2° | %3°").arg(
-            QString::number(msr.mean, 'f', 2),
-            QString::number(msr.std , 'f', 2),
-            QString::number(msr.rmse, 'f', 2)
+        QString("%1° ± %2° | %3° | %4°").arg(
+            QString::number(msr.mean,   'f', 2),
+            QString::number(msr.std ,   'f', 2),
+            QString::number(msr.median, 'f', 2),
+            QString::number(msr.rmse,   'f', 2)
         )
     );
 };
