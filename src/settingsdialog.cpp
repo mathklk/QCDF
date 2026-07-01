@@ -41,6 +41,7 @@ SettingsDialog::SettingsDialog(QWidget *parent)
             qCritical() << "Failed to open COM.txt file";
         }
         if (comPorts.size() == 4) {
+            qDebug() << "COM Ports loaded from COM.txt:" << comPorts;
             ui->lineEdit_1->setText(comPorts[0]);
             ui->lineEdit_2->setText(comPorts[1]);
             ui->lineEdit_3->setText(comPorts[2]);
@@ -82,14 +83,16 @@ SettingsDialog::Settings SettingsDialog::settings() {
     }) {
         if (not le->text().isEmpty()) s.serialPorts << le->text();
     }
-    s.carrierFrequency_MHz = ui->doubleSpinBoxFrequency->value();
-    s.arrayType            = static_cast<AntennaArrayType>(ui->comboBoxArrayType->currentData().value<int>());
-    s.antennaSpacing       = ui->doubleSpinBoxDLambda->value();
-    s.lns                  = ui->doubleSpinBoxLns->value();
-    s.calibration.center   = ui->caliSliders->first();
-    s.calibration.width    = ui->caliSliders->second();
-    s.pong.center          = ui->pongSliders->first();
-    s.pong.width           = ui->pongSliders->second();
+    s.carrierFrequency_MHz      = ui->doubleSpinBoxFrequency->value();
+    s.arrayType                 = static_cast<AntennaArrayType>(ui->comboBoxArrayType->currentData().value<int>());
+    s.antennaSpacing            = ui->doubleSpinBoxDLambda->value();
+    s.calibrationOffset01       = ui->doubleSpinBoxOffset01->value();
+    s.calibrationOffset02       = ui->doubleSpinBoxOffset02->value();
+    s.lns                       = ui->doubleSpinBoxLns->value();
+    s.calibrationRange.center   = ui->caliSliders->first();
+    s.calibrationRange.width    = ui->caliSliders->second();
+    s.pongRange.center          = ui->pongSliders->first();
+    s.pongRange.width           = ui->pongSliders->second();
     return s;
 }
 

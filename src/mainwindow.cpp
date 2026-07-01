@@ -123,6 +123,11 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(_recorder, &Recorder::recordProgress, this, [this](int v, int m){
         ui->progressBarRecord->setMaximum(m);
         ui->progressBarRecord->setValue(v);
+        if (v >= m) {
+            // Recorder is done and stopped by itself.
+            ui->pushButtonStart->setEnabled(true);
+            ui->pushButtonStop->setEnabled(false);
+        }
     });
     connect(_recorder, &Recorder::data, this, [this](QVector<QVector<Frame>> data){
         ui->pushButtonSave->setEnabled(not data.empty());
@@ -457,10 +462,10 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
     SettingsDialog::Settings const settings = _settingsDialog->settings();
 
     // Calibration and Pong ranges
-    int const caliCenter = settings.calibration.center;
-    int const caliWidth  = settings.calibration.width;
-    int const pongCenter = settings.pong.center;
-    int const pongWidth  = settings.pong.width;
+    int const caliCenter = settings.calibrationRange.center;
+    int const caliWidth  = settings.calibrationRange.width;
+    int const pongCenter = settings.pongRange.center;
+    int const pongWidth  = settings.pongRange.width;
     int const caliStart = qMax(0,          caliCenter - caliWidth);
     int const caliEnd   = qMin(FRAME_SIZE, caliCenter + caliWidth);
     int const pongStart = qMax(0,          pongCenter - pongWidth);
@@ -473,8 +478,10 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
     ui->progressBarChart->setMaximum(records.size());
     for (auto const& [name, collection] : records) {
         ui->progressBarChart->setValue(batch.size());
-        QString const cacheKey = name + "_" + QString::number(qHashBits(&settings, sizeof(settings)), 32);
+
         // First, check if file is already cached
+        // The cache key includes the full file path and settings, but CAN be ambiguous for new recordings
+        QString const cacheKey = name + "_" + QString::number(qHashBits(&settings, sizeof(settings)), 32);
         if (_cache.contains(cacheKey)) {
             batch << _cache[cacheKey];
             continue;
@@ -484,11 +491,16 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         entry.name = name;
         entry.collection = collection;
 
+        // Apply the "Hardware" calibration
+        entry.collection[1] = entry.collection[1].shifted(settings.calibrationOffset01);
+        entry.collection[2] = entry.collection[2].shifted(settings.calibrationOffset02);
+        qDebug() << "Calibration offsets applied:" << settings.calibrationOffset01 << settings.calibrationOffset02;
+
         // Check for pong signal
         float const absLnStdDev = entry.collection[0].sliced(pongStart, 2*pongWidth).abs().ln().stdDev();
         entry.hasPong = absLnStdDev < settings.lns;
 
-        // Calculate MUSIC spectrum
+        // Calculate MUSIC spectrum. The onboard-calibration by reference signal is done within this method, too.
         entry.music.spectrum = music(
             settings.arrayType,
             settings.antennaSpacing,
@@ -500,7 +512,7 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
             entry.music.max
         );
 
-        // Calculate PDOA angles
+        // Calculate PDOA angles. We again do the onboard calibration here - could be unified with Music later.
         entry.pdoa.cali01 = gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
         entry.pdoa.cali02 = gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
 
@@ -606,10 +618,10 @@ void MainWindow::calc() {
         X.append(i * resolution);
     }
     // Calibration and Pong ranges
-    int const caliCenter = _settingsDialog->settings().calibration.center;
-    int const caliWidth  = _settingsDialog->settings().calibration.width;
-    int const pongCenter = _settingsDialog->settings().pong.center;
-    int const pongWidth  = _settingsDialog->settings().pong.width;
+    int const caliCenter = _settingsDialog->settings().calibrationRange.center;
+    int const caliWidth  = _settingsDialog->settings().calibrationRange.width;
+    int const pongCenter = _settingsDialog->settings().pongRange.center;
+    int const pongWidth  = _settingsDialog->settings().pongRange.width;
     int const caliStart = qMax(0,          caliCenter - caliWidth);
     int const caliEnd   = qMin(FRAME_SIZE, caliCenter + caliWidth);
     int const pongStart = qMax(0,          pongCenter - pongWidth);
@@ -900,21 +912,25 @@ void MainWindow::calc() {
         plot::makeAxes(chart, "real", "imag");
     } else if (chartType == "Reference Phases") {
         chart = new QChart();      
-        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali01; }), "Cali01");
-        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali02; }), "Cali02");
-        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong01; }), "Pong01");
-        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong12; }), "Pong12");
-        plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong02; }), "Pong02");
-        NumList<double> calibrated01, calibrated02;
+        //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali01; }), "Cali01");
+        //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.cali02; }), "Cali02");
+        //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong01; }), "Pong01");
+        //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong12; }), "Pong12");
+        //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong02; }), "Pong02");
+        NumList<double> cali01, cali02, calibrated01, calibrated02;
         for (auto const& entry : batch) {
             if (pongOnly and not entry.hasPong) {
                 calibrated01 << NAN;
                 calibrated02 << NAN;
             } else {
+                cali01 << entry.pdoa.cali01;
+                cali02 << entry.pdoa.cali02;
                 calibrated01 << polar::wrapPi(entry.pdoa.pong01 - entry.pdoa.cali01);
                 calibrated02 << polar::wrapPi(entry.pdoa.pong02 - entry.pdoa.cali02);
             }
         }
+        qDebug() << "Cali01: " << calibrated01.mean() << "+-" << calibrated01.stdDev();
+        qDebug() << "Cali02: " << calibrated02.mean() << "+-" << calibrated02.stdDev();
         plot::line(chart, calibrated01, "Calibrated01");
         plot::line(chart, calibrated02, "Calibrated02");
         plot::box(chart, 0ll, batch.size(), -M_PI, M_PI, "", brush::gray);

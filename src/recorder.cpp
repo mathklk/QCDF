@@ -15,7 +15,7 @@ void Recorder::startRecording() {
     }
 
     if (_timer->isActive()) {
-        qCritical() << "Core::startRecording called while already recording.";
+        qCritical() << "Recorder::startRecording called while already recording.";
         return;
     }
     _timer->setInterval(_interval);
@@ -25,7 +25,7 @@ void Recorder::startRecording() {
 
 void Recorder::stopRecording() {
     if (!_timer->isActive()) {
-        qCritical() << "Core::stopRecording called while not recording.";
+        qCritical() << "Recorder::stopRecording called while not recording.";
         return;
     }
     _timer->stop();

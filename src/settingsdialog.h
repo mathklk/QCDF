@@ -21,15 +21,17 @@ public:
         float carrierFrequency_MHz;
         AntennaArrayType arrayType;
         float antennaSpacing;
+        float calibrationOffset01;
+        float calibrationOffset02;
         float lns;
         struct {
             int center;
             int width;
-        } calibration;
+        } calibrationRange;
         struct {
             int center;
             int width;
-        } pong;
+        } pongRange;
 
         float lambda_m() const;
     };
