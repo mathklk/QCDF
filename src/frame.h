@@ -60,12 +60,18 @@ public:
         }
         return ret;
     }
-    ComplexList shifted(float const angle_rad) const {
-        ComplexList ret;
-        ret.reserve(size());
-        for (auto const& x : *this) {
-            ret.append(x * std::polar(1.0f, angle_rad));
+
+    // Shifts the ComplexList by an angle in radians (in-place)
+    void shift(float const angle_rad) {
+        for (auto& x : *this) {
+            x *= std::polar(1.0f, angle_rad);
         }
+    }
+
+    // Returns a copy of the ComplexList shifted by an angle in radians
+    ComplexList shifted(float const angle_rad) const {
+        ComplexList ret = *this;
+        ret.shift(angle_rad);
         return ret;
     }
 

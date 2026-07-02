@@ -3,12 +3,16 @@
 #include <QTranslator>
 #include <QLibraryInfo>
 
+#include <csignal>
+
 #include "metaTypes.h"
 
 #include "mainwindow.h"
 #include "recorder.h"
 #include "node.h"
 #include "collector.h"
+
+MainWindow* g_mainwindow = nullptr;
 
 int main(int argc, char *argv[])
 {    
@@ -44,8 +48,9 @@ int main(int argc, char *argv[])
         t->start();
     }
 
-    MainWindow w(recorder, nodes, collector);
-    w.show();
+    g_mainwindow = new MainWindow(recorder, nodes, collector);
+    signal(SIGINT, [](int){ g_mainwindow->externalSignal(); });
+    g_mainwindow->show();
 
     int const exec = QCoreApplication::exec();
     for (QThread *const t : threads) {

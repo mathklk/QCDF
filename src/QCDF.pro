@@ -18,7 +18,8 @@ SOURCES += \
     music.cpp \
     node.cpp \
     recorder.cpp \
-    settingsdialog.cpp
+    settingsdialog.cpp \
+    spectrum.cpp
 
 HEADERS += \
     antenna_array_type.h \
@@ -39,7 +40,8 @@ HEADERS += \
     plot.h \
     polar.h \
     recorder.h \
-    settingsdialog.h
+    settingsdialog.h \
+    spectrum.h
 
 FORMS += \
     doubleslider.ui \
@@ -52,6 +54,7 @@ RESOURCES += \
 DISTFILES += \
     .gitignore \
     $$OUT_PWD/debug/COM.txt
+    $$OUT_PWD/COM.txt
 
 include(qt_zoomable_chart_widget/zoomable_chart_widget.pri)
 INCLUDEPATH += eigen-3.4.1/

@@ -169,42 +169,9 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         ui->pushButtonStart->setEnabled(true);
         _collector->reset();
     });
-    connect(ui->pushButtonStop, &QPushButton::clicked, _recorder, &Recorder::stopRecording);
-    connect(ui->pushButtonSave, &QPushButton::clicked, this, [this](){
-        QString dir = QFileDialog::getExistingDirectory(nullptr, "Select Save Location");
-        if (dir.isEmpty()) {
-            return;
-        }
-        bool const dirIsEmpty = QDir(dir).entryList(QDir::NoDotAndDotDot | QDir::AllEntries).isEmpty();
-        if (not dir.isEmpty() and not dirIsEmpty) {
-            // Ask user if they want to save in non-empty directory, this may overwrite files
-            bool const overwrite = QMessageBox::question(
-                this,
-                "Warning",
-                "The Selected directory is not empty.\nDo you still want to save recordings here?\nThis may overwrite existing files.\n\n" +dir
-            ) == QMessageBox::Yes;
-            if (not overwrite) {
-                return;
-            }
-        }
-        for (QListWidgetItem *const qitem : ui->listWidgetRecord->selectedItems()) {
-            ListItem *const item = dynamic_cast<ListItem *const>(qitem);
-            if (item == nullptr) {
-                continue;
-            }
-            QJsonArray json;
-            for (ComplexList const& cl : item->data) {
-                json << cl.toJson();
-            }
-            int const id = item->id;
-            QFile file(dir + "/" + QString("%1").arg(id, 5, 10, QChar('0')) + ".json");
-            if (!file.open(QIODevice::WriteOnly)) {
-                qWarning() << "Couldn't open save file." << file.errorString();
-                continue;
-            }
-            file.write(QJsonDocument(json).toJson(QJsonDocument::Compact));
-        }
-    });
+    connect(ui->pushButtonStop, &QPushButton::clicked, this, &MainWindow::recorderStopRecording);
+    connect(this, &MainWindow::recorderStopRecording, _recorder, &Recorder::stopRecording);
+    connect(ui->pushButtonSave, &QPushButton::clicked, this, &MainWindow::saveClicked);
     connect(ui->listWidgetRecord, &QListWidget::itemSelectionChanged, this, [this](){
         ui->pushButtonSave->setEnabled(not ui->listWidgetRecord->selectedItems().isEmpty());
     });
@@ -278,7 +245,11 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         calc();
     });
     connect(ui->actionDebug, &QAction::triggered, this, [this](){
-        qDebug() << _cache.keys();
+        qDebug() << "Cache: (" << _cache.size() << ")";
+        for (auto const& key : _cache.keys()) {
+            CacheEntry const& entry = _cache[key];
+            qDebug() << "   " << key << entry.name << entry.hasPong;
+        }
     });
 
     // I'll never remember doing this in the .ui
@@ -290,6 +261,13 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::externalSignal() {
+    emit recorderStopRecording();
+    ui->pushButtonStop->setEnabled(false);
+    ui->pushButtonStart->setEnabled(true);
+    _collector->reset();
 }
 
 void MainWindow::settingsChanged() {
@@ -335,6 +313,42 @@ QVector<ComplexList> MainWindow::collectionFromFile(QString const& filePath) con
     };
 }
 
+void MainWindow::saveClicked() {
+    QString dir = QFileDialog::getExistingDirectory(nullptr, "Select Save Location");
+    if (dir.isEmpty()) {
+        return;
+    }
+    bool const dirIsEmpty = QDir(dir).entryList(QDir::NoDotAndDotDot | QDir::AllEntries).isEmpty();
+    if (not dir.isEmpty() and not dirIsEmpty) {
+        // Ask user if they want to save in non-empty directory, this may overwrite files
+        bool const overwrite = QMessageBox::question(
+           this,
+           "Warning",
+           "The Selected directory is not empty.\nDo you still want to save recordings here?\nThis may overwrite existing files.\n\n" +dir
+        ) == QMessageBox::Yes;
+        if (not overwrite) {
+            return;
+        }
+    }
+    for (QListWidgetItem *const qitem : ui->listWidgetRecord->selectedItems()) {
+        ListItem *const item = dynamic_cast<ListItem *const>(qitem);
+        if (item == nullptr) {
+            continue;
+        }
+        QJsonArray json;
+        for (ComplexList const& cl : item->data) {
+            json << cl.toJson();
+        }
+        int const id = item->id;
+        QFile file(dir + "/" + QString("%1").arg(id, 5, 10, QChar('0')) + ".json");
+        if (!file.open(QIODevice::WriteOnly)) {
+            qWarning() << "Couldn't open save file." << file.errorString();
+            continue;
+        }
+        file.write(QJsonDocument(json).toJson(QJsonDocument::Compact));
+    }
+}
+
 void MainWindow::putFilesIntoListWidget(QStringList const& files) {
     ui->listWidgetLoad->clear();
     ui->pushButtonClearLoad->setEnabled(not files.isEmpty());
@@ -364,6 +378,11 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
     eval.n = 0;
     for (auto const& entry : batch) {
         eval.n += entry.hasPong ? 1 : 0;
+    }
+
+    if (batch.empty()) {
+        QMessageBox::critical(nullptr, "Leeres Batch", "Leeres Batch");
+        return eval;
     }
 
     // Individual peaks
@@ -441,20 +460,6 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
     eval.pdoa.msr.std      = polar::circularStdDevDeg(pdoaMean);
     eval.pdoa.msr.rmse     = polar::rmse(pdoaMean, trueAngle, &range);
 
-    NumList<double> cali01, cali02, pong01, pong02, pong12, alpha01, alpha12, alpha02;
-    for (auto const& entry : batch) {
-        if (entry.hasPong) {
-            cali01 << entry.pdoa.cali01;
-            cali02 << entry.pdoa.cali02;
-            pong01 << entry.pdoa.pong01;
-            pong02 << entry.pdoa.pong02;
-            pong12 << entry.pdoa.pong12;
-            alpha01 << entry.pdoa.alpha01;
-            alpha12 << entry.pdoa.alpha12;
-            alpha02 << entry.pdoa.alpha02;
-        }
-    }
-
     return eval;
 }
 
@@ -476,7 +481,7 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
     QVector<CacheEntry> batch;
     batch.reserve(records.size());
     ui->progressBarChart->setMaximum(records.size());
-    for (auto const& [name, collection] : records) {
+    for (auto const& [name, _collection] : records) {
         ui->progressBarChart->setValue(batch.size());
 
         // First, check if file is already cached
@@ -489,41 +494,60 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         // If not cached, make calculations and add to cache
         CacheEntry entry;
         entry.name = name;
-        entry.collection = collection;
+        entry.collection = _collection;
 
         // Apply the "Hardware" calibration
-        entry.collection[1] = entry.collection[1].shifted(settings.calibrationOffset01);
-        entry.collection[2] = entry.collection[2].shifted(settings.calibrationOffset02);
-        qDebug() << "Calibration offsets applied:" << settings.calibrationOffset01 << settings.calibrationOffset02;
+        //entry.collection[1] = entry.collection[1].shifted(settings.calibrationOffset01);
+        //entry.collection[2] = entry.collection[2].shifted(settings.calibrationOffset02);
+        //qDebug() << "Calibration offsets applied:" << settings.calibrationOffset01 << settings.calibrationOffset02;
 
-        // Check for pong signal
+        /* Check if 'pong' answer is present
+         * This is done by looking at the amplitude, taking the logarithm and then the standard deviation over the pong duration
+         * Noise will be, well *noisy* and have a large standard deviation
+         * A clean signal will have a consistent amplitude and thus a low standard deviation
+         *
+         * (this is kind of a simplified workaround for the Signal-to-noise ratio)
+         *
+         * Since we only look at the amplitude, it does not matter if we use the calbirated or uncalibrated collection
+         */
         float const absLnStdDev = entry.collection[0].sliced(pongStart, 2*pongWidth).abs().ln().stdDev();
         entry.hasPong = absLnStdDev < settings.lns;
 
-        // Calculate MUSIC spectrum. The onboard-calibration by reference signal is done within this method, too.
-        entry.music.spectrum = music(
-            settings.arrayType,
-            settings.antennaSpacing,
-            entry.collection,
-            {caliStart, caliEnd},
-            {pongStart, pongEnd},
-            entry.music.peakAngle,
-            entry.music.min,
-            entry.music.max
-        );
+        // Apply onboard calibration by using the masters' reference signal
+        entry.pdoa.cali01 = gr_doa::phaseDifference(entry.collection[0], entry.collection[1], caliStart, caliEnd);
+        entry.pdoa.cali02 = gr_doa::phaseDifference(entry.collection[0], entry.collection[2], caliStart, caliEnd);
+        entry.collection[1].shift(-entry.pdoa.cali01);
+        entry.collection[2].shift(-entry.pdoa.cali02);
 
-        // Calculate PDOA angles. We again do the onboard calibration here - could be unified with Music later.
-        entry.pdoa.cali01 = gr_doa::phaseDifference(collection[0], collection[1], caliStart, caliEnd);
-        entry.pdoa.cali02 = gr_doa::phaseDifference(collection[0], collection[2], caliStart, caliEnd);
+        // Apply manual/hardware calibration from settings dialog
+        //qDebug() << "Calibration offsets:" << settings.calibration.enabled << settings.calibration.offset01 << settings.calibration.offset02;
+        if (settings.calibration.enabled) {
+            entry.collection[1].shift(-settings.calibration.offset01);
+            entry.collection[2].shift(-settings.calibration.offset02);
+        }
+        // Note that for the purpose of AOA estimation, it wouldn't be necessary to shift the entire recording,
+        // the calculation is only based on the short timeframe where the pong signal is present
+        // However for the sake of simplicity and debugging its easier to just work with a single copy
 
-        entry.pdoa.pong01 = gr_doa::phaseDifference(collection[0], collection[1], pongStart, pongEnd);
-        entry.pdoa.pong12 = gr_doa::phaseDifference(collection[1], collection[2], pongStart, pongEnd);
-        entry.pdoa.pong02 = gr_doa::phaseDifference(collection[0], collection[2], pongStart, pongEnd);
+        // ===============================
+        //              PDOA
+        // ===============================
 
-        /* Angle calculation from phase difference for ULA and UCA
+        // Calculate PDOA angles by taking the phase difference during the pong timeframe
+        entry.pdoa.phase01 = gr_doa::phaseDifference(entry.collection[0], entry.collection[1], pongStart, pongEnd);
+        entry.pdoa.phase12 = gr_doa::phaseDifference(entry.collection[1], entry.collection[2], pongStart, pongEnd);
+        entry.pdoa.phase02 = gr_doa::phaseDifference(entry.collection[0], entry.collection[2], pongStart, pongEnd);
+
+        /* For the angle calculation from phase difference, we need to account for the array structure (ULA / UCA)
+         * "v" indicates the zero bearing
          *
-         * The ULA angles already match the desired reference ( "v" indicates zero bearing)
-         * For UCA, we have to correct for different baseline orientations (+-60 degrees for sides)
+         * The ULA angles already match the desired reference
+         * Note that the distance between 0 and 2 is double!
+         * IF THIS DISTANCE IS LARGER THAN HALF A WAVELENGTH, THE ANGLE WILL BE AMBIGUOUS
+         *
+         * For UCA, we have to correct for different baseline orientations
+         * +-60 degrees for sides
+         * +180° for the base
          *
          * ULA:
          *
@@ -538,10 +562,6 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
          *  2 - 1
          */
 
-        entry.pdoa.phase01 = polar::wrapPi(entry.pdoa.pong01 -  entry.pdoa.cali01                     );
-        entry.pdoa.phase12 = polar::wrapPi(entry.pdoa.pong12 - (entry.pdoa.cali02 - entry.pdoa.cali01));
-        entry.pdoa.phase02 = polar::wrapPi(entry.pdoa.pong02 -  entry.pdoa.cali02                     );
-
         double const lambda_m = settings.lambda_m();
         int const spacing02 = (settings.arrayType == AntennaArrayType::ULA) ? 2 : 1;
         entry.pdoa.alpha01 = gr_doa::angle(entry.pdoa.phase01, lambda_m, settings.antennaSpacing * lambda_m            );
@@ -554,6 +574,27 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
             entry.pdoa.alpha02 = polar::wrap180(entry.pdoa.alpha02 - 60 );
             entry.pdoa.alpha12 = polar::wrap180(entry.pdoa.alpha12 + 180);
         }
+
+        // ===============================
+        //              MUSIC
+        // ===============================
+
+        QVector<ComplexList> const pongCollection = {
+            entry.collection[0].sliced(pongStart, 2*pongWidth),
+            entry.collection[1].sliced(pongStart, 2*pongWidth),
+            entry.collection[2].sliced(pongStart, 2*pongWidth)
+        };
+
+        // Calculate MUSIC spectrum. The onboard-calibration by reference signal is done within this method, too.
+        entry.music.spectrum = music(
+            settings.arrayType,
+            settings.antennaSpacing,
+            pongCollection,
+            entry.music.peakAngle,
+            entry.music.min,
+            entry.music.max
+        );
+
         _cache[cacheKey] = entry;
         batch << entry;
     }
@@ -917,22 +958,17 @@ void MainWindow::calc() {
         //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong01; }), "Pong01");
         //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong12; }), "Pong12");
         //plot::scatter(chart, batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.pong02; }), "Pong02");
-        NumList<double> cali01, cali02, calibrated01, calibrated02;
-        for (auto const& entry : batch) {
-            if (pongOnly and not entry.hasPong) {
-                calibrated01 << NAN;
-                calibrated02 << NAN;
-            } else {
-                cali01 << entry.pdoa.cali01;
-                cali02 << entry.pdoa.cali02;
-                calibrated01 << polar::wrapPi(entry.pdoa.pong01 - entry.pdoa.cali01);
-                calibrated02 << polar::wrapPi(entry.pdoa.pong02 - entry.pdoa.cali02);
-            }
-        }
-        qDebug() << "Cali01: " << calibrated01.mean() << "+-" << calibrated01.stdDev();
-        qDebug() << "Cali02: " << calibrated02.mean() << "+-" << calibrated02.stdDev();
-        plot::line(chart, calibrated01, "Calibrated01");
-        plot::line(chart, calibrated02, "Calibrated02");
+
+        NumList<double> const phase01 = batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.phase01; });
+        NumList<double> const phase12 = batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.phase12; });
+        NumList<double> const phase02 = batch.map<double>([=](auto e){ return (pongOnly and not e.hasPong) ? NAN : e.pdoa.phase02; });
+
+        qInfo() << "Cali01: " << phase01.mean() << "+-" << phase01.stdDev() << "(" << 100*phase01.mean() / (2*M_PI) << "%";
+        qInfo() << "Cali12: " << phase12.mean() << "+-" << phase12.stdDev() << "(" << 100*phase12.mean() / (2*M_PI) << "%";
+        qInfo() << "Cali02: " << phase02.mean() << "+-" << phase02.stdDev() << "(" << 100*phase02.mean() / (2*M_PI) << "%";
+        plot::line(chart, phase01, "0-1");
+        plot::line(chart, phase12, "1-2");
+        plot::line(chart, phase02, "0-2");
         plot::box(chart, 0ll, batch.size(), -M_PI, M_PI, "", brush::gray);
         plot::makeAxes(
             chart,
@@ -1041,8 +1077,11 @@ void MainWindow::autoCalc() {
     int i = 0;
     for (QString const& dir : subDirs) {
         bool validName;
-        double const angle = dir.toDouble(&validName);
-        if (!validName) continue;
+        double const angle = QString(dir).replace("+-", "").toDouble(&validName);
+        if (!validName) {
+            QMessageBox::critical(this, "Ungültiger Verzeichnisname", QString("Der Name '%1' kann nicht als Winkel interpretiert werden").arg(dir));
+            return;
+        }
         ui->progressBarAuto->setValue(i++);
         QVector<QPair<QString, QVector<ComplexList>>> records;
         QStringList const files = QDir(parentDir + "/" + dir).entryList({"*.json"}, QDir::Files);
@@ -1084,9 +1123,10 @@ void MainWindow::autoCalc() {
 
     QMessageBox box(this);
     box.setIcon(QMessageBox::Information);
-    box.setWindowTitle("Result - " + parentDir.split("/").last());
-    box.setText(angleLables.join("\t") + "\n\n" + tsv);
-    box.addButton("Copy", QMessageBox::ActionRole);
+    QString const name = parentDir.split("/").last();
+    box.setWindowTitle("Resultat - " + name);
+    box.setText(name + "\n\n" + _settingsDialog->settings().arrayType + "\n\n" + QString::number(angleLables.size()) + " Spalten");
+    box.addButton("Kopieren", QMessageBox::ActionRole);
     box.exec();
     QGuiApplication::clipboard()->setText(tsv);
     //QMessageBox::information(this, "AutoCalc", angleLables.join("\t") + "\n\n" + tsv);

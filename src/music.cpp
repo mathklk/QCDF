@@ -1,35 +1,16 @@
 #include "music.h"
 
-#include "gr_doa.h"
 #include "gr_music.h"
-
-
-float Spectrum::atAngle(int const& alpha) const {
-    for (auto const& [beta, amplitude] : *this) {
-        if (alpha == beta) {
-            return amplitude;
-        }
-    }
-    return NAN;
-}
 
 Spectrum music(
     AntennaArrayType const array,
     float const dLambda,
     QVector<ComplexList> const& collection,
-    QPair<int, int> cali,
-    QPair<int, int> pong,
     int& peak,
     double& minY,
     double& maxY
 ) {
-    QVector<float> phaseOffsets;
-    phaseOffsets << 0;
-    phaseOffsets << gr_doa::phaseDifference(collection[0], collection[1], cali.first, cali.second);
-    phaseOffsets << gr_doa::phaseDifference(collection[0], collection[2], cali.first, cali.second);
-
     // Parameters for 3-element ULA
-    //float D = ui->comboBoxDLambda->currentData().toFloat();  // Normalized spacing (e.g., d/λ)
     int num_targets = 1;
     int num_ant = 3;
     int pspectrum_len;
@@ -50,18 +31,14 @@ Spectrum music(
         qCritical() << "Unsupported array type" << int(array);
     }
 
-
-    // Simulate IQ samples: N snapshots, each with 3 complex samples (one per antenna)
-    // int N = 100;  // Number of snapshots (increase for better estimation)
-    // Eigen::MatrixXcf samples = Eigen::MatrixXcf::Random(N, num_ant);  // Replace with real IQ data
-
-    // Real IQ Data from Collection
-    int N = collection.first().size() / sizeof(IQ);
+    // Copy IQ data from collection into Eigen Matrix
+    int N = collection.first().size();
+    //qDebug() << "N:" << N << "num_ant:" << num_ant << "collection[0].size():" << collection[0].size();
     Eigen::MatrixXcf samples = Eigen::MatrixXcf::Zero(N, num_ant);
     for (int ant = 0; ant < num_ant; ++ant) {
         auto const& complexList = collection[ant];
-        for (int i = pong.first; i < pong.second; ++i) {
-            samples(i - pong.first, ant) = complexList[i] * std::polar(1.0f, -phaseOffsets[ant]);
+        for (int i = 0; i < N; ++i) {
+            samples(i, ant) = complexList[i];
         }
     }
 
@@ -110,16 +87,4 @@ Spectrum music(
         return a.first < b.first;
     });
     return qSpectrum;
-}
-
-void normalizeSpectrum(Spectrum& spectrum, float minY) {
-    if (minY == INFINITY) {
-        for (auto const& [angle, amp] : spectrum) {
-            minY = qMin(minY, amp);
-        }
-    }
-    float const factor = qAbs(minY);
-    for (auto& [angle, amp] : spectrum) {
-        amp /= factor;
-    }
 }
