@@ -25,6 +25,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     });
     connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset01, &QDoubleSpinBox::setEnabled);
     connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset02, &QDoubleSpinBox::setEnabled);
+    ui->doubleSpinBoxOffset01->setEnabled(ui->checkBoxManualCalibration->isChecked());
+    ui->doubleSpinBoxOffset02->setEnabled(ui->checkBoxManualCalibration->isChecked());
 
     // This will store settings in ~/.config/Uni-Oldenburg/QCDF.ini
     QCoreApplication::setOrganizationName("Uni-Oldenburg");
