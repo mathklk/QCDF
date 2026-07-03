@@ -23,8 +23,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
         apply();
         close();
     });
-    connect(ui->pushButtonCalibration, &QPushButton::clicked, ui->doubleSpinBoxOffset01, &QDoubleSpinBox::setEnabled);
-    connect(ui->pushButtonCalibration, &QPushButton::clicked, ui->doubleSpinBoxOffset02, &QDoubleSpinBox::setEnabled);
+    connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset01, &QDoubleSpinBox::setEnabled);
+    connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset02, &QDoubleSpinBox::setEnabled);
 
     // This will store settings in ~/.config/Uni-Oldenburg/QCDF.ini
     QCoreApplication::setOrganizationName("Uni-Oldenburg");
@@ -97,17 +97,18 @@ SettingsDialog::Settings SettingsDialog::settings() {
     }) {
         if (not le->text().isEmpty()) s.serialPorts << le->text();
     }
-    s.carrierFrequency_MHz      = ui->doubleSpinBoxFrequency->value();
-    s.arrayType                 = AntennaArrayType(ui->comboBoxArrayType->currentData().value<int>());
-    s.antennaSpacing            = ui->doubleSpinBoxDLambda->value();
-    s.lns                       = ui->doubleSpinBoxLns->value();
-    s.calibration.enabled       = ui->pushButtonCalibration->isChecked();
-    s.calibration.offset01      = ui->doubleSpinBoxOffset01->value();
-    s.calibration.offset02      = ui->doubleSpinBoxOffset02->value();
-    s.calibrationRange.center   = ui->caliSliders->first();
-    s.calibrationRange.width    = ui->caliSliders->second();
-    s.pongRange.center          = ui->pongSliders->first();
-    s.pongRange.width           = ui->pongSliders->second();
+    s.carrierFrequency_MHz       = ui->doubleSpinBoxFrequency->value();
+    s.arrayType                  = AntennaArrayType(ui->comboBoxArrayType->currentData().value<int>());
+    s.antennaSpacing             = ui->doubleSpinBoxDLambda->value();
+    s.lns                        = ui->doubleSpinBoxLns->value();
+    s.onboardCalibration.enabled = ui->checkBoxOnboardCalibration->isChecked();
+    s.manualCalibration.enabled  = ui->checkBoxManualCalibration->isChecked();
+    s.manualCalibration.offset01 = ui->doubleSpinBoxOffset01->value();
+    s.manualCalibration.offset02 = ui->doubleSpinBoxOffset02->value();
+    s.calibrationRange.center    = ui->caliSliders->first();
+    s.calibrationRange.width     = ui->caliSliders->second();
+    s.pongRange.center           = ui->pongSliders->first();
+    s.pongRange.width            = ui->pongSliders->second();
     return s;
 }
 

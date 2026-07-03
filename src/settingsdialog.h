@@ -25,9 +25,12 @@ public:
         float lns;
         struct {
             bool enabled;
+        } onboardCalibration;
+        struct {
+            bool enabled;
             float offset01;
             float offset02;
-        } calibration;
+        } manualCalibration;
         struct {
             int center;
             int width;

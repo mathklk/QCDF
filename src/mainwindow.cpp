@@ -496,11 +496,6 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         entry.name = name;
         entry.collection = _collection;
 
-        // Apply the "Hardware" calibration
-        //entry.collection[1] = entry.collection[1].shifted(settings.calibrationOffset01);
-        //entry.collection[2] = entry.collection[2].shifted(settings.calibrationOffset02);
-        //qDebug() << "Calibration offsets applied:" << settings.calibrationOffset01 << settings.calibrationOffset02;
-
         /* Check if 'pong' answer is present
          * This is done by looking at the amplitude, taking the logarithm and then the standard deviation over the pong duration
          * Noise will be, well *noisy* and have a large standard deviation
@@ -514,16 +509,21 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         entry.hasPong = absLnStdDev < settings.lns;
 
         // Apply onboard calibration by using the masters' reference signal
-        entry.pdoa.cali01 = gr_doa::phaseDifference(entry.collection[0], entry.collection[1], caliStart, caliEnd);
-        entry.pdoa.cali02 = gr_doa::phaseDifference(entry.collection[0], entry.collection[2], caliStart, caliEnd);
-        entry.collection[1].shift(-entry.pdoa.cali01);
-        entry.collection[2].shift(-entry.pdoa.cali02);
+        if (settings.onboardCalibration.enabled) {
+            entry.pdoa.cali01 = gr_doa::phaseDifference(entry.collection[0], entry.collection[1], caliStart, caliEnd);
+            entry.pdoa.cali02 = gr_doa::phaseDifference(entry.collection[0], entry.collection[2], caliStart, caliEnd);
+            entry.collection[1].shift(-entry.pdoa.cali01);
+            entry.collection[2].shift(-entry.pdoa.cali02);
+        } else {
+            entry.pdoa.cali01 = 0;
+            entry.pdoa.cali02 = 0;
+        }
 
         // Apply manual/hardware calibration from settings dialog
         //qDebug() << "Calibration offsets:" << settings.calibration.enabled << settings.calibration.offset01 << settings.calibration.offset02;
-        if (settings.calibration.enabled) {
-            entry.collection[1].shift(-settings.calibration.offset01);
-            entry.collection[2].shift(-settings.calibration.offset02);
+        if (settings.manualCalibration.enabled) {
+            entry.collection[1].shift(-settings.manualCalibration.offset01);
+            entry.collection[2].shift(-settings.manualCalibration.offset02);
         }
         // Note that for the purpose of AOA estimation, it wouldn't be necessary to shift the entire recording,
         // the calculation is only based on the short timeframe where the pong signal is present
@@ -934,7 +934,8 @@ void MainWindow::calc() {
                 int n = -1;
                 for (auto const& x : collection[ant]) {
                     n++;
-                    if (not ((n > caliStart and n < caliEnd) or (n > pongStart and n < pongEnd))) {
+                    float const pongFactor = 0.2f;
+                    if (not ((n > caliStart and n < caliEnd) or (n > (pongStart + pongWidth * (1-pongFactor)) and n < pongEnd))) {
                         continue;
                     }
                     gr_complex shifted = x * std::polar(1.0f, -phaseOffsets[ant]);
