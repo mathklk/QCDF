@@ -970,9 +970,9 @@ void MainWindow::calc() {
 
         // copy to clipboard
         QString clipboard;
-        clipboard += phase01.toQString() + ";\n";
-        clipboard += phase12.toQString() + ";\n";
-        clipboard += phase02.toQString() + ";";
+        clipboard += phase01.toQString() + ",\n";
+        clipboard += phase12.toQString() + ",\n";
+        clipboard += phase02.toQString() + "\n";
         QApplication::clipboard()->setText(clipboard);
 
         plot::line(chart, phase01, "0-1");
