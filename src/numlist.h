@@ -57,6 +57,14 @@ public:
 
         return qSqrt(variance);
     }
+
+    QString toQString() const {
+        QStringList strList;
+        for (auto const& x : *this) {
+            strList.append(QString::number(x));
+        }
+        return "[" + strList.join(", ") + "]";
+    }
 };
 
 #endif // NUMLIST_H

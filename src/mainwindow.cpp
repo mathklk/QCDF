@@ -967,10 +967,18 @@ void MainWindow::calc() {
         qInfo() << "Cali01: " << phase01.mean() << "+-" << phase01.stdDev() << "(" << 100*phase01.mean() / (2*M_PI) << "%";
         qInfo() << "Cali12: " << phase12.mean() << "+-" << phase12.stdDev() << "(" << 100*phase12.mean() / (2*M_PI) << "%";
         qInfo() << "Cali02: " << phase02.mean() << "+-" << phase02.stdDev() << "(" << 100*phase02.mean() / (2*M_PI) << "%";
+
+        // copy to clipboard
+        QString clipboard;
+        clipboard += phase01.toQString() + ";\n";
+        clipboard += phase12.toQString() + ";\n";
+        clipboard += phase02.toQString() + ";";
+        QApplication::clipboard()->setText(clipboard);
+
         plot::line(chart, phase01, "0-1");
         plot::line(chart, phase12, "1-2");
         plot::line(chart, phase02, "0-2");
-        plot::box(chart, 0ll, batch.size(), -M_PI, M_PI, "", brush::gray);
+        plot::box(chart, 0ll, batch.size()-1, -M_PI, M_PI, "", brush::gray);
         plot::makeAxes(
             chart,
             "Peilung #",
