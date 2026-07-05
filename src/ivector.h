@@ -3,6 +3,7 @@
 
 #include <QVector>
 #include <functional>
+#include "numlist.h"
 
 template <typename T>
 class IVector : public QVector<T>
@@ -32,6 +33,14 @@ public:
 
     operator QVector<T>() const {
         return QVector<T>(*this);
+    }
+    operator NumList<T>() const {
+        NumList<T> ret;
+        ret.reserve(this->size());
+        for (T const& x : *this) {
+            ret.append(x);
+        }
+        return ret;
     }
 };
 

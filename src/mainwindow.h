@@ -40,9 +40,6 @@ private:
         struct {
             double cali01;
             double cali02;
-            double pong01;
-            double pong12;
-            double pong02;
             double phase01;
             double phase12;
             double phase02;
@@ -57,17 +54,22 @@ public:
     explicit MainWindow(Recorder *const, QVector<Node*> const&, Collector* const);
     ~MainWindow() override;
 
+public slots:
+    void externalSignal();
+
 signals:
     void reconnectNodes();
     void bytesToNode0(QByteArray);
     void bytesToNode1(QByteArray);
     void bytesToNode2(QByteArray);
     void bytesToNode3(QByteArray);
+    void recorderStopRecording();
 
 private slots:
     void settingsChanged();
     bool currentTabIsAnalyisTab(void) const;
     QVector<ComplexList> collectionFromFile(QString const& filePath) const;
+    void saveClicked();
     void putFilesIntoListWidget(QStringList const&);
     Evaluation evaluate(QVector<CacheEntry> const&, double const&, QPair<double, double> const&) const;
     QVector<CacheEntry> loadCached(QVector<QPair<QString, QVector<ComplexList>>> const&) const;

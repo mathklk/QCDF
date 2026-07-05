@@ -2,6 +2,7 @@
 #define SETTINGSDIALOG_H
 
 #include <QWidget>
+#include <QSettings>
 #include "antenna_array_type.h"
 
 namespace Ui {
@@ -21,9 +22,15 @@ public:
         float carrierFrequency_MHz;
         AntennaArrayType arrayType;
         float antennaSpacing;
-        float calibrationOffset01;
-        float calibrationOffset02;
         float lns;
+        struct {
+            bool enabled;
+        } onboardCalibration;
+        struct {
+            bool enabled;
+            float offset01;
+            float offset02;
+        } manualCalibration;
         struct {
             int center;
             int width;
@@ -43,10 +50,12 @@ signals:
     void slidersChanged(void);
 
 private slots:
+    void apply(void);
     void updateLambda();
 
 private:
     Ui::SettingsDialog *ui;
+    QSettings* _qSettings;
 };
 
 #endif // SETTINGSDIALOG_H

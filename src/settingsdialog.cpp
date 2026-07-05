@@ -18,40 +18,43 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     connect(ui->doubleSpinBoxDLambda,   &QDoubleSpinBox::valueChanged, this, &SettingsDialog::updateLambda);
     updateLambda();
 
-    connect(ui->pushButtonApply, &QPushButton::clicked, this, [this](){
-        emit changed();
-    });
+    connect(ui->pushButtonApply, &QPushButton::clicked, this, &SettingsDialog::apply);
     connect(ui->pushButtonOk, &QPushButton::clicked, this, [this](){
-        emit changed();
+        apply();
         close();
     });
+    connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset01, &QDoubleSpinBox::setEnabled);
+    connect(ui->checkBoxManualCalibration, &QCheckBox::clicked, ui->doubleSpinBoxOffset02, &QDoubleSpinBox::setEnabled);
+    ui->doubleSpinBoxOffset01->setEnabled(ui->checkBoxManualCalibration->isChecked());
+    ui->doubleSpinBoxOffset02->setEnabled(ui->checkBoxManualCalibration->isChecked());
 
-    QFile comFile("COM.txt");
-    QStringList comPorts;
-    if (comFile.exists()) {
-        if (comFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            while (!comFile.atEnd()) {
-                QString line = comFile.readLine().trimmed();
-                if (!line.isEmpty()) {
-                    comPorts.append(line);
-                }
-            }
-            comFile.close();
+    // This will store settings in ~/.config/Uni-Oldenburg/QCDF.ini
+    QCoreApplication::setOrganizationName("Uni-Oldenburg");
+    QCoreApplication::setApplicationName("QCDF");
+    _qSettings = new QSettings(
+        QSettings::IniFormat,
+        QSettings::UserScope,
+        QCoreApplication::organizationName(),
+        QCoreApplication::applicationName()
+    );
+
+    // Load Settings
+    if (_qSettings->contains("serialPorts")) {
+        QStringList const ports = _qSettings->value("serialPorts").toStringList();
+        if (ports.size() == 4) {
+            ui->lineEdit_1->setText(ports[0]);
+            ui->lineEdit_2->setText(ports[1]);
+            ui->lineEdit_3->setText(ports[2]);
+            ui->lineEdit_4->setText(ports[3]);
         } else {
-            qCritical() << "Failed to open COM.txt file";
+            qCritical() << "QSettings contains wrong number of serial ports:" << ports.size() << " (expected" << 4 << ")";
         }
-        if (comPorts.size() == 4) {
-            qDebug() << "COM Ports loaded from COM.txt:" << comPorts;
-            ui->lineEdit_1->setText(comPorts[0]);
-            ui->lineEdit_2->setText(comPorts[1]);
-            ui->lineEdit_3->setText(comPorts[2]);
-            ui->lineEdit_4->setText(comPorts[3]);
-        } else {
-            qCritical() << "COM.txt contains wrong number of entries:" << comPorts.size() << " (expected" << 4 << ")";
-        }
-    } else {
-        qWarning() << "COM.txt file not found in directory" << QDir::currentPath();
-        //show();
+    }
+    if (_qSettings->contains("calibration01")) {
+        ui->doubleSpinBoxOffset01->setValue(_qSettings->value("calibration01").toDouble());
+    }
+    if (_qSettings->contains("calibration02")) {
+        ui->doubleSpinBoxOffset02->setValue(_qSettings->value("calibration02").toDouble());
     }
 
     ui->caliSliders->setRange(0, 7000);
@@ -65,6 +68,19 @@ SettingsDialog::SettingsDialog(QWidget *parent)
 SettingsDialog::~SettingsDialog()
 {
     delete ui;
+}
+
+void SettingsDialog::apply()
+{
+    _qSettings->setValue("serialPorts", QStringList{
+        ui->lineEdit_1->text(),
+        ui->lineEdit_2->text(),
+        ui->lineEdit_3->text(),
+        ui->lineEdit_4->text()
+    });
+    _qSettings->setValue("calibration01", ui->doubleSpinBoxOffset01->value());
+    _qSettings->setValue("calibration02", ui->doubleSpinBoxOffset02->value());
+    emit changed();
 }
 
 void SettingsDialog::updateLambda() {
@@ -83,16 +99,18 @@ SettingsDialog::Settings SettingsDialog::settings() {
     }) {
         if (not le->text().isEmpty()) s.serialPorts << le->text();
     }
-    s.carrierFrequency_MHz      = ui->doubleSpinBoxFrequency->value();
-    s.arrayType                 = static_cast<AntennaArrayType>(ui->comboBoxArrayType->currentData().value<int>());
-    s.antennaSpacing            = ui->doubleSpinBoxDLambda->value();
-    s.calibrationOffset01       = ui->doubleSpinBoxOffset01->value();
-    s.calibrationOffset02       = ui->doubleSpinBoxOffset02->value();
-    s.lns                       = ui->doubleSpinBoxLns->value();
-    s.calibrationRange.center   = ui->caliSliders->first();
-    s.calibrationRange.width    = ui->caliSliders->second();
-    s.pongRange.center          = ui->pongSliders->first();
-    s.pongRange.width           = ui->pongSliders->second();
+    s.carrierFrequency_MHz       = ui->doubleSpinBoxFrequency->value();
+    s.arrayType                  = AntennaArrayType(ui->comboBoxArrayType->currentData().value<int>());
+    s.antennaSpacing             = ui->doubleSpinBoxDLambda->value();
+    s.lns                        = ui->doubleSpinBoxLns->value();
+    s.onboardCalibration.enabled = ui->checkBoxOnboardCalibration->isChecked();
+    s.manualCalibration.enabled  = ui->checkBoxManualCalibration->isChecked();
+    s.manualCalibration.offset01 = ui->doubleSpinBoxOffset01->value();
+    s.manualCalibration.offset02 = ui->doubleSpinBoxOffset02->value();
+    s.calibrationRange.center    = ui->caliSliders->first();
+    s.calibrationRange.width     = ui->caliSliders->second();
+    s.pongRange.center           = ui->pongSliders->first();
+    s.pongRange.width            = ui->pongSliders->second();
     return s;
 }
 
