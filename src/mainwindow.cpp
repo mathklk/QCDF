@@ -244,13 +244,6 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         _cache.clear();
         calc();
     });
-    connect(ui->actionDebug, &QAction::triggered, this, [this](){
-        qDebug() << "Cache: (" << _cache.size() << ")";
-        for (auto const& key : _cache.keys()) {
-            CacheEntry const& entry = _cache[key];
-            qDebug() << "   " << key << entry.name << entry.hasPong;
-        }
-    });
 
     // I'll never remember doing this in the .ui
     ui->tabWidget->setCurrentIndex(0);
@@ -1117,27 +1110,46 @@ void MainWindow::autoCalc() {
     std::sort(evaluations.begin(), evaluations.end(), [](auto const& a, auto const& b){
         return a.first < b.first;
     });
-    QStringList angleLables;
-    QVector<QStringList> evalData;
-    for (auto const& [angle, eval] : evaluations) {
-        angleLables.append(QString::number(angle));
-        evalData.append(eval.toColumn());
-    }
-    QStringList str;
-    for (QStringList const& row : transpose(evalData)) {
-        str << row.join("\t");
-    }
-    QString const tsv = str.join("\n");
-    QGuiApplication::clipboard()->setText(tsv);
 
+    QString clipboard;
+    if (!ui->actionDebug->isChecked()) {
+        QStringList angleLables;
+        QVector<QStringList> evalData;
+        for (auto const& [angle, eval] : evaluations) {
+            angleLables.append(QString::number(angle));
+            evalData.append(eval.toColumn());
+        }
+        QStringList str;
+        for (QStringList const& row : transpose(evalData)) {
+            str << row.join("\t");
+        }
+        clipboard = str.join("\n");
+    } else {
+        clipboard += "alpha\t";
+        QStringList angleLables;
+        for (auto const& [angle, value] : evaluations.first().second.musicSum.spectrum) {
+            angleLables.append(QString::number(angle));
+        }
+        clipboard += angleLables.join('\t') + "\n";
+        for (auto const& [alpha, eval] : evaluations) {
+            clipboard += QString::number(alpha) + "\t";
+            QStringList values;
+            for (auto const& [angle, value] : eval.musicSum.spectrum) {
+                values.append(QString::number(value));
+            }
+            clipboard += values.join('\t') + "\n";
+        }
+    }
+
+
+    QGuiApplication::clipboard()->setText(clipboard);
     QMessageBox box(this);
     box.setIcon(QMessageBox::Information);
     QString const name = parentDir.split("/").last();
     box.setWindowTitle("Resultat - " + name);
-    box.setText(name + "\n\n" + _settingsDialog->settings().arrayType + "\n\n" + QString::number(angleLables.size()) + " Spalten");
+    box.setText(name + "\n\n" + _settingsDialog->settings().arrayType + "\n\n" + QString::number(evaluations.size()) + " Spalten");
     box.addButton("Kopieren", QMessageBox::ActionRole);
     box.exec();
-    QGuiApplication::clipboard()->setText(tsv);
-    //QMessageBox::information(this, "AutoCalc", angleLables.join("\t") + "\n\n" + tsv);
+    QGuiApplication::clipboard()->setText(clipboard);
 }
 
