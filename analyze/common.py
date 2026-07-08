@@ -28,11 +28,11 @@ def make_y_angle(ax: Axes, angles: List | pd.Index):
     ax.set_yticks(angles)
     ax.set_ylim(min(angles), max(angles))
 
-def pscatter(ax: Axes, Z: pd.Series | pd.DataFrame, **kwargs):
+def pscatter(ax: Axes, Z: pd.Series, **kwargs):
     ax.scatter(Z.index, Z.to_numpy(), **kwargs)
 
-def wrapplot(ax: Axes, Z: pd.Series | pd.DataFrame, low = -180, high = 180, **kwargs):
-    pieces: Iterable[pd.Series] = [pd.Series(dtype=Z.dtype)]
+def wrapsegments(Z: pd.Series, low = -180, high = 180) -> List[pd.Series]:
+    pieces: list[pd.Series] = [pd.Series(dtype=Z.dtype)]
     wrapRange = high - low
     prev = None
     for i in range(len(Z)):
@@ -51,16 +51,25 @@ def wrapplot(ax: Axes, Z: pd.Series | pd.DataFrame, low = -180, high = 180, **kw
                 pieces[-1].loc[prev[0]] = prev[1] + wrapRange * np.sign(y - prev[1])
                 pieces[-1].loc[x] = y
         prev = (x, y)
-    for piece in pieces:
+    return pieces
+
+def wrapplot(ax: Axes, Z: pd.Series, low = -180, high = 180, **kwargs):
+    for piece in wrapsegments(Z, low, high):
         ax.plot(piece.index, piece.to_numpy(), **kwargs)
         if 'label' in kwargs:
             del kwargs['label']  # only add label once, or it will appear multiple times in the legend
 
-def scatterandwrapplot(ax: Axes, Z: pd.Series | pd.DataFrame, **kwargs):
+def scatterandwrapplot(ax: Axes, Z: pd.Series, **kwargs):
     wrapplot(ax, Z, **kwargs)
     if 'label' in kwargs:
         del kwargs['label']
     pscatter(ax, Z, **kwargs)
+
+def wrapfill(ax: Axes, mean: pd.Series, std: pd.Series, sigma, low = -180, high = 180, **kwargs):
+    for piece in wrapsegments(mean, low, high):
+        ax.fill_between(piece.index, piece - sigma*std.loc[piece.index], piece + sigma*std.loc[piece.index], **kwargs)
+        if 'label' in kwargs:
+            del kwargs['label']  # only add label once, or it will appear multiple times in the legend
 
 def legend(ax: Axes, **kwargs):
     l = ax.legend(**kwargs)
