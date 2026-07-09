@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass
 from matplotlib.axes import Axes
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from typing import *
@@ -12,20 +13,40 @@ class Scenario:
     type: str
     distance: float
     data: str
-    color: str
 
     df: pd.DataFrame = None # type: ignore
+
+    def color(self):
+        _c = {
+            ('ULA', 3.5): "#004c6d",
+            ('ULA', 20 ): "#6698b3",
+            ('ULA', 100): '#beebff',
+            ('UCA', 20 ): '#ed7d31',
+        }
+        return _c.get((self.type, self.distance))
 
     def name(self):
         return f"{self.type} {self.distance}m"
     
+uca_colors = [
+    "#ff8629",
+    "#bd4715",
+    "#790000",
+]
 
-def make_x_angle(ax: Axes, angles: List | pd.Index):
-    ax.set_xticks(angles)
+def subplots(nrows: int = 1, ncols: int = 1, **kwargs):
+    default = {
+        'figsize': FIG_SIZE * np.array([ncols, nrows]),
+    }
+    return plt.subplots(nrows=nrows, ncols=ncols, **{**default, **kwargs}) # type: ignore
+
+def make_x_angle(ax: Axes, angles: Iterable):
+    ax.set_xticks(list(angles))
+    ax.set_xticklabels([str(a) for a in angles])
     ax.set_xlim(min(angles), max(angles))
 
-def make_y_angle(ax: Axes, angles: List | pd.Index):
-    ax.set_yticks(angles)
+def make_y_angle(ax: Axes, angles: Iterable):
+    ax.set_yticks(list(angles))
     ax.set_ylim(min(angles), max(angles))
 
 def pscatter(ax: Axes, Z: pd.Series, **kwargs):
@@ -65,9 +86,18 @@ def scatterandwrapplot(ax: Axes, Z: pd.Series, **kwargs):
         del kwargs['label']
     pscatter(ax, Z, **kwargs)
 
-def wrapfill(ax: Axes, mean: pd.Series, std: pd.Series, sigma, low = -180, high = 180, **kwargs):
+def wrapfillmeanstd(ax: Axes, mean: pd.Series, std: pd.Series, sigma, low = -180, high = 180, **kwargs):
     for piece in wrapsegments(mean, low, high):
         ax.fill_between(piece.index, piece - sigma*std.loc[piece.index], piece + sigma*std.loc[piece.index], **kwargs)
+        if 'label' in kwargs:
+            del kwargs['label']  # only add label once, or it will appear multiple times in the legend
+
+def wrapfillquantiles(ax: Axes, median: pd.Series, lowerQ: pd.Series, upperQ: pd.Series, low = -180, high = 180, **kwargs):
+    relativeUpperQ = upperQ - median
+    relativeLowerQ = median - lowerQ
+    for piece in wrapsegments(median, low, high):
+        # ax.fill_between(piece.index, lowerQ.loc[piece.index], upperQ.loc[piece.index], **kwargs)
+        ax.fill_between(piece.index, piece.loc[piece.index] - relativeLowerQ.loc[piece.index], piece.loc[piece.index] + relativeUpperQ.loc[piece.index], **kwargs)
         if 'label' in kwargs:
             del kwargs['label']  # only add label once, or it will appear multiple times in the legend
 

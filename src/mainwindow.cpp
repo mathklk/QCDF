@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QPolarChart>
 #include <QClipboard>
+#include <QActionGroup>
 
 namespace brush {
     QBrush gray    (QColor::fromRgb(0x7f, 0x7f, 0x7f));
@@ -228,7 +229,7 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
     connect(_settingsDialog, &SettingsDialog::changed, this, &MainWindow::calc);
     connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::calc);
     connect(ui->doubleSpinBoxTrueAlpha, &QDoubleSpinBox::valueChanged, this, &MainWindow::calc);
-    connect(ui->pushButtonAuto, &QPushButton::clicked, this, &MainWindow::autoCalc);
+    connect(ui->actionStart, &QAction::triggered, this, &MainWindow::autoCalc);
 
     // Actions
     QList<QAction*> reCalcActions = {
@@ -244,6 +245,12 @@ MainWindow::MainWindow(Recorder *const core, QVector<Node*> const& nodes, Collec
         _cache.clear();
         calc();
     });
+    QActionGroup *const autoCalcTypeGroup = new QActionGroup(this);
+    autoCalcTypeGroup->addAction(ui->actionAutoGeneric);
+    autoCalcTypeGroup->addAction(ui->actionAutoMusicSum);
+    autoCalcTypeGroup->addAction(ui->actionAutoMusicSeparate);
+    autoCalcTypeGroup->addAction(ui->actionAutoPdoa);
+    autoCalcTypeGroup->setExclusive(true);
 
     // I'll never remember doing this in the .ui
     ui->tabWidget->setCurrentIndex(0);
@@ -381,6 +388,7 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
     // Individual peaks
     for (auto const& entry : batch) {
         if (entry.hasPong) {
+            eval.musicSeparate.spectra << entry.music.spectrum;
             eval.musicSeparate.peaks << double(entry.music.peakAngle);
         }
     }
@@ -424,30 +432,27 @@ Evaluation MainWindow::evaluate(QVector<CacheEntry> const& batch, double const& 
     eval.musicSum.quality = eval.musicSum.spectrum.atAngle(trueAngle) / eval.musicSum.minY;
     
     // PDOA
-    NumList<double> pdoa01;
-    NumList<double> pdoa12;
-    NumList<double> pdoa02;
     NumList<double> pdoaMean;
     for (auto const& entry : batch) {
         if (entry.hasPong) {
-            pdoa01 << entry.pdoa.alpha01;
-            pdoa12 << entry.pdoa.alpha12;
-            pdoa02 << entry.pdoa.alpha02;
+            eval.pdoa.alpha01 << entry.pdoa.alpha01;
+            eval.pdoa.alpha12 << entry.pdoa.alpha12;
+            eval.pdoa.alpha02 << entry.pdoa.alpha02;
             pdoaMean << entry.pdoa.alphaMean;
         }
     }
-    eval.pdoa.msr01.mean   = polar::circularMeanDeg(pdoa01);
-    eval.pdoa.msr01.median = polar::circularMedianDeg(pdoa01);
-    eval.pdoa.msr01.std    = polar::circularStdDevDeg(pdoa01);
-    eval.pdoa.msr01.rmse   = polar::rmse(pdoa01, trueAngle, &range);
-    eval.pdoa.msr12.mean   = polar::circularMeanDeg(pdoa12);
-    eval.pdoa.msr12.median = polar::circularMedianDeg(pdoa12);
-    eval.pdoa.msr12.std    = polar::circularStdDevDeg(pdoa12);
-    eval.pdoa.msr12.rmse   = polar::rmse(pdoa12, trueAngle, &range);
-    eval.pdoa.msr02.mean   = polar::circularMeanDeg(pdoa02);
-    eval.pdoa.msr02.median = polar::circularMedianDeg(pdoa02);
-    eval.pdoa.msr02.std    = polar::circularStdDevDeg(pdoa02);
-    eval.pdoa.msr02.rmse   = polar::rmse(pdoa02, trueAngle, &range);
+    eval.pdoa.msr01.mean   = polar::circularMeanDeg(eval.pdoa.alpha01);
+    eval.pdoa.msr01.median = polar::circularMedianDeg(eval.pdoa.alpha01);
+    eval.pdoa.msr01.std    = polar::circularStdDevDeg(eval.pdoa.alpha01);
+    eval.pdoa.msr01.rmse   = polar::rmse(eval.pdoa.alpha01, trueAngle, &range);
+    eval.pdoa.msr12.mean   = polar::circularMeanDeg(eval.pdoa.alpha12);
+    eval.pdoa.msr12.median = polar::circularMedianDeg(eval.pdoa.alpha12);
+    eval.pdoa.msr12.std    = polar::circularStdDevDeg(eval.pdoa.alpha12);
+    eval.pdoa.msr12.rmse   = polar::rmse(eval.pdoa.alpha12, trueAngle, &range);
+    eval.pdoa.msr02.mean   = polar::circularMeanDeg(eval.pdoa.alpha02);
+    eval.pdoa.msr02.median = polar::circularMedianDeg(eval.pdoa.alpha02);
+    eval.pdoa.msr02.std    = polar::circularStdDevDeg(eval.pdoa.alpha02);
+    eval.pdoa.msr02.rmse   = polar::rmse(eval.pdoa.alpha02, trueAngle, &range);
     eval.pdoa.msr.mean     = polar::circularMeanDeg(pdoaMean);
     eval.pdoa.msr.median   = polar::circularMedianDeg(pdoaMean);
     eval.pdoa.msr.std      = polar::circularStdDevDeg(pdoaMean);
@@ -513,7 +518,6 @@ QVector<MainWindow::CacheEntry> MainWindow::loadCached(QVector<QPair<QString, QV
         }
 
         // Apply manual/hardware calibration from settings dialog
-        //qDebug() << "Calibration offsets:" << settings.calibration.enabled << settings.calibration.offset01 << settings.calibration.offset02;
         if (settings.manualCalibration.enabled) {
             entry.collection[1].shift(-settings.manualCalibration.offset01);
             entry.collection[2].shift(-settings.manualCalibration.offset02);
@@ -1071,8 +1075,8 @@ void MainWindow::autoCalc() {
         return;
     }
 
-    ui->progressBarAuto->setMaximum(subDirs.size());
-    ui->progressBarAuto->setValue(0);
+    ui->progressBarLoad->setMaximum(subDirs.size());
+    ui->progressBarLoad->setValue(0);
 
     // Iterate through angles and perform evaluation
     QVector<QPair<double, Evaluation>> evaluations;
@@ -1084,7 +1088,7 @@ void MainWindow::autoCalc() {
             QMessageBox::critical(this, "Ungültiger Verzeichnisname", QString("Der Name '%1' kann nicht als Winkel interpretiert werden").arg(dir));
             return;
         }
-        ui->progressBarAuto->setValue(i++);
+        ui->progressBarLoad->setValue(i++);
         QVector<QPair<QString, QVector<ComplexList>>> records;
         QStringList const files = QDir(parentDir + "/" + dir).entryList({"*.json"}, QDir::Files);
         for (QString const& fileName : files) {
@@ -1105,14 +1109,17 @@ void MainWindow::autoCalc() {
         }
         evaluations.append({angle, evaluate(batch, trueAngle, range)});
     }
-    ui->progressBarAuto->setValue(i);
+    ui->progressBarLoad->setValue(i);
     // sort by angle (-90, -60 .. 90)
     std::sort(evaluations.begin(), evaluations.end(), [](auto const& a, auto const& b){
         return a.first < b.first;
     });
 
+    QString const sep('\t');
+    QString const line('\n');
     QString clipboard;
-    if (!ui->actionDebug->isChecked()) {
+    if (ui->actionAutoGeneric->isChecked()) {
+        // Generic, high-level evaluation output
         QStringList angleLables;
         QVector<QStringList> evalData;
         for (auto const& [angle, eval] : evaluations) {
@@ -1121,24 +1128,57 @@ void MainWindow::autoCalc() {
         }
         QStringList str;
         for (QStringList const& row : transpose(evalData)) {
-            str << row.join("\t");
+            str << row.join(sep);
         }
-        clipboard = str.join("\n");
-    } else {
-        clipboard += "alpha\t";
+        clipboard = str.join(line);
+    } else if (ui->actionAutoMusicSum->isChecked()) {
+        // MUSIC Sum spectra
+        clipboard += "alpha" + sep;
         QStringList angleLables;
         for (auto const& [angle, value] : evaluations.first().second.musicSum.spectrum) {
             angleLables.append(QString::number(angle));
         }
-        clipboard += angleLables.join('\t') + "\n";
+        clipboard += angleLables.join(sep) + line;
         for (auto const& [alpha, eval] : evaluations) {
-            clipboard += QString::number(alpha) + "\t";
+            clipboard += QString::number(alpha) + sep;
             QStringList values;
             for (auto const& [angle, value] : eval.musicSum.spectrum) {
                 values.append(QString::number(value));
             }
-            clipboard += values.join('\t') + "\n";
+            clipboard += values.join(sep) + line;
         }
+    } else if (ui->actionAutoMusicSeparate->isChecked()) {
+        // All Individual MUSIC spectra
+        clipboard += "alpha" + sep;
+        QStringList angleLables;
+        for (auto const& [angle, value] : evaluations.first().second.musicSum.spectrum) {
+            angleLables.append(QString::number(angle));
+        }
+        clipboard += angleLables.join(sep) + line;
+        for (auto const& [alpha, eval] : evaluations) {
+            for (Spectrum const& spectrum : eval.musicSeparate.spectra) {
+                clipboard += QString::number(alpha) + sep;
+                QStringList values;
+                for (auto const& [angle, value] : spectrum) {
+                    values.append(QString::number(value));
+                }
+                clipboard += values.join(sep) + line;
+            }
+        }
+    } else if (ui->actionAutoPdoa->isChecked()) {
+        // Individual PDOA angles
+        clipboard += "alpha" + sep + "pdoa01" + sep + "pdoa12" + sep + "pdoa02" + line;
+        for (auto const& [alpha, eval] : evaluations) {
+            for (int i = 0; i < eval.n; ++i) {
+                clipboard +=
+                    QString::number(alpha) + sep +
+                    QString::number(eval.pdoa.alpha01[i]) + sep +
+                    QString::number(eval.pdoa.alpha12[i]) + sep +
+                    QString::number(eval.pdoa.alpha02[i]) + line;
+            }
+        }
+    } else {
+        clipboard = "UNIMPLEMENTED";
     }
 
 

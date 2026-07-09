@@ -20,7 +20,8 @@ struct Evaluation {
     int n;
 
     struct {
-        NumList<double> peaks;
+        QList<Spectrum> spectra; // }
+        NumList<double> peaks;   // } Only those with pong
         MeanMedianStdRmse msr;
         double minY;
         double maxY;
@@ -35,6 +36,9 @@ struct Evaluation {
     } musicSum;
 
     struct {
+        NumList<double> alpha01;
+        NumList<double> alpha12;
+        NumList<double> alpha02;
         MeanMedianStdRmse msr01;
         MeanMedianStdRmse msr12;
         MeanMedianStdRmse msr02;

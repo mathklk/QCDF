@@ -24,8 +24,124 @@
        <attribute name="title">
         <string>Aufzeichnungen</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,0,1">
-        <item row="0" column="0" rowspan="3">
+       <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,1">
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Laden</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="0" column="1">
+            <widget class="QPushButton" name="pushButtonLoadDir">
+             <property name="text">
+              <string>Verzeichnis...</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButtonLoadFiles">
+             <property name="text">
+              <string>Dateien...</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QProgressBar" name="progressBarLoad">
+             <property name="maximum">
+              <number>1</number>
+             </property>
+             <property name="value">
+              <number>0</number>
+             </property>
+             <property name="format">
+              <string>%v / %m</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QListWidget" name="listWidgetRecord">
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>0</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="2" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonClearLoad">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="QIcon::ThemeIcon::EditDelete"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="2" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonClearRecord">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="QIcon::ThemeIcon::EditDelete"/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="0" rowspan="2">
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
            <string>Aufnehmen</string>
@@ -112,156 +228,11 @@
           </layout>
          </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QListWidget" name="listWidgetRecord">
-          <property name="selectionMode">
-           <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout">
-          <item>
-           <spacer name="horizontalSpacer">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonClearRecord">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset theme="QIcon::ThemeIcon::EditDelete"/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="2" column="1">
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>0</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="0" column="1">
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="title">
-           <string>Laden</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_5">
-           <item row="0" column="1">
-            <widget class="QPushButton" name="pushButtonLoadDir">
-             <property name="text">
-              <string>Verzeichnis...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QPushButton" name="pushButtonLoadFiles">
-             <property name="text">
-              <string>Dateien...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0" colspan="2">
-            <widget class="QProgressBar" name="progressBarLoad">
-             <property name="maximum">
-              <number>1</number>
-             </property>
-             <property name="value">
-              <number>0</number>
-             </property>
-             <property name="format">
-              <string>%v / %m</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
         <item row="3" column="1">
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <spacer name="horizontalSpacer_2">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonClearLoad">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset theme="QIcon::ThemeIcon::EditDelete"/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="4" column="1">
          <widget class="QListWidget" name="listWidgetLoad">
           <property name="selectionMode">
            <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
           </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QGroupBox" name="groupBox_7">
-          <property name="title">
-           <string>Auto-Auswertung</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_8">
-           <item row="0" column="0">
-            <widget class="QPushButton" name="pushButtonAuto">
-             <property name="text">
-              <string>Verzeichnis...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QProgressBar" name="progressBarAuto">
-             <property name="maximum">
-              <number>1</number>
-             </property>
-             <property name="value">
-              <number>0</number>
-             </property>
-             <property name="format">
-              <string>%v / %m</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
          </widget>
         </item>
        </layout>
@@ -618,7 +589,7 @@
      <x>0</x>
      <y>0</y>
      <width>711</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSystem">
@@ -639,8 +610,20 @@
     <addaction name="separator"/>
     <addaction name="actionClear_Cache"/>
    </widget>
+   <widget class="QMenu" name="menuAuto_Auswertung">
+    <property name="title">
+     <string>Auto-Auswertung</string>
+    </property>
+    <addaction name="actionAutoGeneric"/>
+    <addaction name="actionAutoMusicSum"/>
+    <addaction name="actionAutoMusicSeparate"/>
+    <addaction name="actionAutoPdoa"/>
+    <addaction name="separator"/>
+    <addaction name="actionStart"/>
+   </widget>
    <addaction name="menuSystem"/>
    <addaction name="menuChart"/>
+   <addaction name="menuAuto_Auswertung"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSettings">
@@ -697,6 +680,46 @@
    </property>
    <property name="text">
     <string>Debug</string>
+   </property>
+  </action>
+  <action name="actionAutoGeneric">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Generic</string>
+   </property>
+  </action>
+  <action name="actionAutoMusicSum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>MUSIC Summe</string>
+   </property>
+  </action>
+  <action name="actionAutoPdoa">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PDOA</string>
+   </property>
+  </action>
+  <action name="actionStart">
+   <property name="text">
+    <string>Start...</string>
+   </property>
+  </action>
+  <action name="actionAutoMusicSeparate">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>MUSIC Separat</string>
    </property>
   </action>
  </widget>
