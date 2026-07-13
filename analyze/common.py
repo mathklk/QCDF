@@ -18,8 +18,8 @@ class Scenario:
 
     def color(self):
         _c = {
-            ('ULA', 3.5): "#004c6d",
-            ('ULA', 20 ): "#6698b3",
+            ('ULA', 3.5): "#588299",
+            ('ULA', 20 ): "#7ab7d8",
             ('ULA', 100): '#beebff',
             ('UCA', 20 ): '#ed7d31',
         }
