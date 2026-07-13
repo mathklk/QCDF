@@ -40,10 +40,14 @@ def subplots(nrows: int = 1, ncols: int = 1, **kwargs):
     }
     return plt.subplots(nrows=nrows, ncols=ncols, **{**default, **kwargs}) # type: ignore
 
-def make_x_angle(ax: Axes, angles: Iterable):
+def make_x_angle(ax: Axes, angles: Iterable, half_tick_shift: Union[Literal[-1, 0, 1]] = 0):
     ax.set_xticks(list(angles))
     ax.set_xticklabels([str(a) for a in angles])
-    ax.set_xlim(min(angles), max(angles))
+    half_diff = 0.5 * (max(angles) - min(angles)) / (len(angles) - 1)
+    ax.set_xlim(
+        min(angles) + half_tick_shift * half_diff, 
+        max(angles) + half_tick_shift * half_diff
+    )
 
 def make_y_angle(ax: Axes, angles: Iterable):
     ax.set_yticks(list(angles))
@@ -51,6 +55,10 @@ def make_y_angle(ax: Axes, angles: Iterable):
 
 def pscatter(ax: Axes, Z: pd.Series, **kwargs):
     ax.scatter(Z.index, Z.to_numpy(), **kwargs)
+
+def wrap(arr: np.ndarray, low = -180, high = 180) -> np.ndarray:
+    wrapRange = high - low
+    return (arr - low) % wrapRange + low
 
 def wrapsegments(Z: pd.Series, low = -180, high = 180) -> List[pd.Series]:
     pieces: list[pd.Series] = [pd.Series(dtype=Z.dtype)]
