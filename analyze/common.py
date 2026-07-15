@@ -16,6 +16,9 @@ class Scenario:
 
     df: pd.DataFrame = None # type: ignore
 
+    def __str__(self):
+        return self.name()
+
     def color(self):
         _c = {
             ('ULA', 3.5): "#588299",
