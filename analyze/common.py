@@ -37,9 +37,11 @@ uca_colors = [
     "#790000",
 ]
 
-def subplots(nrows: int = 1, ncols: int = 1, **kwargs):
+def subplots(nrows: int = 1, ncols: int = 1, factor: Optional[Tuple] = None, **kwargs):
+    if factor is None:
+        factor = (1, 1)
     default = {
-        'figsize': FIG_SIZE * np.array([ncols, nrows]),
+        'figsize': FIG_SIZE * np.array([ncols, nrows]) * np.array(factor),
     }
     return plt.subplots(nrows=nrows, ncols=ncols, **{**default, **kwargs}) # type: ignore
 
