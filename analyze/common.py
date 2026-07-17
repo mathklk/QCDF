@@ -16,10 +16,13 @@ class Scenario:
 
     df: pd.DataFrame = None # type: ignore
 
+    def __str__(self):
+        return self.name()
+
     def color(self):
         _c = {
-            ('ULA', 3.5): "#004c6d",
-            ('ULA', 20 ): "#6698b3",
+            ('ULA', 3.5): "#588299",
+            ('ULA', 20 ): "#7ab7d8",
             ('ULA', 100): '#beebff',
             ('UCA', 20 ): '#ed7d31',
         }
@@ -40,25 +43,32 @@ def subplots(nrows: int = 1, ncols: int = 1, **kwargs):
     }
     return plt.subplots(nrows=nrows, ncols=ncols, **{**default, **kwargs}) # type: ignore
 
-def make_x_angle(ax: Axes, angles: Iterable, half_tick_shift: Union[Literal[-1, 0, 1]] = 0):
-    ax.set_xticks(list(angles))
-    ax.set_xticklabels([str(a) for a in angles])
-    half_diff = 0.5 * (max(angles) - min(angles)) / (len(angles) - 1)
+def make_x_angle(ax: Axes, angles: np.typing.ArrayLike, half_tick_shift: Literal[-1, 0, 1] = 0):
+    angles = np.array(angles)
+    ax.set_xticks(angles)
+    ax.set_xticklabels(['±180' if a in (-180, 180) else str(a) for a in angles])
+    half_diff = 0.5 * (angles.max() - angles.min()) / (len(angles) - 1)
     ax.set_xlim(
-        min(angles) + half_tick_shift * half_diff, 
-        max(angles) + half_tick_shift * half_diff
+        angles[ 0] + half_tick_shift * half_diff, 
+        angles[-1] + half_tick_shift * half_diff
     )
 
-def make_y_angle(ax: Axes, angles: Iterable):
-    ax.set_yticks(list(angles))
-    ax.set_ylim(min(angles), max(angles))
+def make_y_angle(ax: Axes, angles: np.typing.ArrayLike):
+    angles = np.array(angles)
+    ax.set_yticks(angles)
+    ax.set_yticklabels(['±180' if a in (-180, 180) else str(a) for a in angles])
+    ax.set_ylim(
+        angles[ 0],
+        angles[-1]
+    )
 
 def pscatter(ax: Axes, Z: pd.Series, **kwargs):
     ax.scatter(Z.index, Z.to_numpy(), **kwargs)
 
 def wrap(arr: np.ndarray, low = -180, high = 180) -> np.ndarray:
     wrapRange = high - low
-    return (arr - low) % wrapRange + low
+    wrapped = (arr - low) % wrapRange + low
+    return np.where(np.isclose(wrapped, low) & (arr >= high), high, wrapped)
 
 def wrapsegments(Z: pd.Series, low = -180, high = 180) -> List[pd.Series]:
     pieces: list[pd.Series] = [pd.Series(dtype=Z.dtype)]
