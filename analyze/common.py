@@ -37,6 +37,8 @@ uca_colors = [
     "#790000",
 ]
 
+letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']
+
 def subplots(nrows: int = 1, ncols: int = 1, **kwargs):
     default = {
         'figsize': FIG_SIZE * np.array([ncols, nrows]),
