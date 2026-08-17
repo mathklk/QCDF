@@ -43,6 +43,7 @@ public:
                      gr_vector_void_star &output_items) = 0;
 };
 
+// MusicLinArray is a wrapper around EttusResearch's MUSIC implementation
 class MusicLinArray: public Music
 {
 private:
@@ -66,6 +67,8 @@ public:
              gr_vector_void_star &output_items) override;
 };
 
+// MusicTriangle is also based on EttusResearch's MUSIC implementation, but for three element uniform circular arrays, instead of linear arrays.
+// I mainly modified the array response matrix generation.
 class MusicTriangle: public Music
 {
 private:

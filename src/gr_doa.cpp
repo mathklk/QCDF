@@ -4,6 +4,36 @@
 #include <algorithm>
 #include <numeric>
 
+/*
+Eigenvector Direction Finding Method from gnuradio-doa
+Computes the Phase Difference "phase(in1) - phase(in0)" between two signals (-Pi, Pi]
+
+https://github.com/samwhiting/gnuradio-doa/blob/2684f235261b2c0d75bb5c5d2ba39d7497cf970a/gr-doa/lib/capon_ccf_impl.cc#L57
+
+
+MIT License
+
+Copyright (c) 2017 Sam Whiting
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
 double gr_doa::_capon_ccf_impl_direction(const gr_complex* in0, const gr_complex* in1, int const d_vector_size) {
     // put in0 and in1 into vectors x1 and x2
     std::vector<gr_complex> x1(in0, in0+d_vector_size);
